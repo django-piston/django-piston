@@ -3,6 +3,7 @@ Piston resource.
 """
 from django.http import HttpResponse, Http404
 from emitters import Emitter
+from handler import typemapper
 
 class Resource(object):
     callmap = { 'GET': 'read', 'POST': 'create', 
@@ -23,8 +24,8 @@ class Resource(object):
         if not meth:        
             raise Http404
 
-        result, fields = meth(request)
+        result = meth(request)
         emitter, ct = Emitter.get(format)
-        srl = emitter(result, fields)
+        srl = emitter(result, typemapper)
         
         return HttpResponse(srl.render(), mimetype=ct)

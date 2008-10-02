@@ -5,17 +5,20 @@ from django.utils import simplejson
 from django.core.serializers.json import DateTimeAwareJSONEncoder
 
 class Emitter(object):
-    def __init__(self, payload, fields=()):
+    def __init__(self, payload, typemapper):
+        self.typemapper = typemapper
+        
         if isinstance(payload, QuerySet):
             self.data = tuple([m for m in payload.all()])
         elif isinstance(payload, Model):
-            self.data = (payload,)
+            self.data = payload
         else:
             raise ValueError("Can't emit this.")
     
     def construct(self):
         
         def _any(thing):
+
             ret = None
             
             if isinstance(thing, (tuple, list)):
@@ -33,17 +36,52 @@ class Emitter(object):
 
             return ret
 
+        def _fk(data, field):
+            related = getattr(data, field.name)
+            
+            if not related:
+                if field.rel.field_name == related._meta.pk.name:
+                    related = related._get_pk_val()
+                else:
+                    related = getattr(related, field.rel.field_name)
+
+            return _any(related)
+            
+        def _m2m(data, field):
+            return [ _model(m) for m in getattr(data, field.name).iterator() ]
+
         def _model(data):
             ret = { }
             
-            for f in data._meta.fields:
-                ret[f.attname] = _any(getattr(data, f.attname))
+            if type(data) in self.typemapper.keys():
+
+                v = lambda f: getattr(data, f.attname)
+                want_fields = self.typemapper.get(type(data)).fields
+                
+                for f in data._meta.local_fields:
+                    if f.serialize:
+                        if not f.rel:
+                            if f.attname in want_fields:
+                                ret[f.attname] = _any(v(f))
+                        else:
+                            if f.attname[:-3] in want_fields:
+                                ret[f.name] = _fk(data, f)
+
+                for mf in data._meta.many_to_many:
+                    if mf.serialize:
+                        if mf.attname in want_fields:
+                            ret[mf.name] = _m2m(data, mf)
+
+            else:
+
+                for f in data._meta.fields:
+                    ret[f.attname] = _any(getattr(data, f.attname))
+
+                fields = dir(data.__class__) + ret.keys()
+                add_ons = [k for k in dir(data) if k not in fields]
             
-            fields = dir(data.__class__) + ret.keys()
-            add_ons = [k for k in dir(data) if k not in fields]
-            
-            for k in add_ons:
-                ret[k] = _any(getattr(data, k))
+                for k in add_ons:
+                    ret[k] = _any(getattr(data, k))
                 
             return ret
             
