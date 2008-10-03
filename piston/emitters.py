@@ -12,6 +12,10 @@ class Emitter(object):
             self.data = tuple([m for m in payload.all()])
         elif isinstance(payload, Model):
             self.data = payload
+        elif isinstance(payload, Exception):
+            raise payload
+        elif isinstance(payload, basestring):
+            self.data = str(payload)
         else:
             raise ValueError("Can't emit this.")
     
@@ -71,7 +75,7 @@ class Emitter(object):
                     if mf.serialize:
                         if mf.attname in want_fields:
                             ret[mf.name] = _m2m(data, mf)
-
+                            
             else:
 
                 for f in data._meta.fields:

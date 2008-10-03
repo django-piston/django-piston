@@ -1,9 +1,10 @@
 """
 Piston resource.
 """
-from django.http import HttpResponse, Http404
+from django.http import HttpResponse, Http404, HttpResponseNotAllowed, HttpResponseForbidden
 from emitters import Emitter
 from handler import typemapper
+from utils import coerce_put_post, FormValidationError
 
 class NoAuthentication(object):
     def is_authenticated(self, request):
@@ -29,14 +30,28 @@ class Resource(object):
         if not self.authentication.is_authenticated(request):
             return self.authentication.challenge()
 
-        rm = request.method.upper()        
+        rm = request.method.upper()
+        
+        # Django's internal mechanism doesn't pick up
+        # PUT request, so we trick it a little here.
+        if rm == "PUT": coerce_put_post(request)
+
+        if not rm in self.handler.allowed_methods:
+            return HttpResponseNotAllowed(self.handler.allowed_methods)
+
         meth = getattr(self.handler, Resource.callmap.get(rm), None)
         format = request.GET.get('format', 'json')
         
         if not meth:        
             raise Http404
 
-        result = meth(request)
+        try:
+            result = meth(request, *args, **kwargs)
+        except FormValidationError, errors:
+            return HttpResponse("errors: %r" % errors)
+        except Exception, e:
+            result = e
+            
         emitter, ct = Emitter.get(format)
         srl = emitter(result, typemapper)
         
