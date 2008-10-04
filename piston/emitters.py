@@ -1,4 +1,4 @@
-import types, decimal, yaml
+import types, decimal, yaml, copy
 from django.db.models.query import QuerySet
 from django.db.models import Model
 from django.utils import simplejson
@@ -7,17 +7,7 @@ from django.core.serializers.json import DateTimeAwareJSONEncoder
 class Emitter(object):
     def __init__(self, payload, typemapper):
         self.typemapper = typemapper
-        
-        if isinstance(payload, QuerySet):
-            self.data = tuple([m for m in payload.all()])
-        elif isinstance(payload, Model):
-            self.data = payload
-        elif isinstance(payload, Exception):
-            raise payload
-        elif isinstance(payload, basestring):
-            self.data = str(payload)
-        else:
-            raise ValueError("Can't emit this.")
+        self.data = payload
     
     def construct(self):
         
@@ -25,7 +15,7 @@ class Emitter(object):
 
             ret = None
             
-            if isinstance(thing, (tuple, list)):
+            if isinstance(thing, (tuple, list, QuerySet)):
                 ret = _list(thing)
             elif isinstance(thing, dict):
                 ret = _dict(thing)
@@ -41,15 +31,7 @@ class Emitter(object):
             return ret
 
         def _fk(data, field):
-            related = getattr(data, field.name)
-            
-            if not related:
-                if field.rel.field_name == related._meta.pk.name:
-                    related = related._get_pk_val()
-                else:
-                    related = getattr(related, field.rel.field_name)
-
-            return _any(related)
+            return _any(getattr(data, field.name))
             
         def _m2m(data, field):
             return [ _model(m) for m in getattr(data, field.name).iterator() ]
@@ -60,21 +42,28 @@ class Emitter(object):
             if type(data) in self.typemapper.keys():
 
                 v = lambda f: getattr(data, f.attname)
-                want_fields = self.typemapper.get(type(data)).fields
+                want_fields = copy.copy(list(self.typemapper.get(type(data)).fields))
                 
                 for f in data._meta.local_fields:
                     if f.serialize:
                         if not f.rel:
                             if f.attname in want_fields:
                                 ret[f.attname] = _any(v(f))
+                                want_fields.remove(f.attname)
                         else:
                             if f.attname[:-3] in want_fields:
                                 ret[f.name] = _fk(data, f)
+                                want_fields.remove(f.name)
 
                 for mf in data._meta.many_to_many:
                     if mf.serialize:
                         if mf.attname in want_fields:
                             ret[mf.name] = _m2m(data, mf)
+                            want_fields.remove(mf.name)
+                            
+                # try to get the remainder of fields
+                for maybe_field in want_fields:
+                    pass # do something here?
                             
             else:
 
@@ -118,9 +107,10 @@ class XMLEmitter(Emitter):
     pass
     
 class JSONEmitter(Emitter):
+    # TODO: callback functions
     def render(self):
         return simplejson.dumps(self.construct(), cls=DateTimeAwareJSONEncoder)
     
 class YAMLEmitter(Emitter):
     def render(self):
-        return yaml.dump(self.construct())
+        return yaml.safe_dump(self.construct())
