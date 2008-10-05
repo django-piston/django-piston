@@ -97,7 +97,8 @@ class Emitter(object):
                     url_id, fields = handler.resource_uri()
                     ret['resource_uri'] = permalink( lambda: (url_id, 
                         (getattr(data, f) for f in fields) ) )()
-            elif hasattr(data, 'get_api_url'):
+            
+            if hasattr(data, 'get_api_url') and 'resource_uri' not in ret:
                 try: ret['resource_uri'] = data.get_api_url()
                 except: pass
             
