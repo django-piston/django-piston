@@ -1,6 +1,6 @@
 import types, decimal, yaml, copy
 from django.db.models.query import QuerySet
-from django.db.models import Model
+from django.db.models import Model, permalink
 from django.utils import simplejson
 from django.utils.xmlutils import SimplerXMLGenerator
 from django.utils.encoding import smart_unicode
@@ -89,7 +89,18 @@ class Emitter(object):
             
                 for k in add_ons:
                     ret[k] = _any(getattr(data, k))
-                
+            
+            # resouce uri
+            if type(data) in self.typemapper.keys():
+                handler = self.typemapper.get(type(data))
+                if hasattr(handler, 'resource_uri'):
+                    url_id, fields = handler.resource_uri()
+                    ret['resource_uri'] = permalink( lambda: (url_id, 
+                        (getattr(data, f) for f in fields) ) )()
+            elif hasattr(data, 'get_api_url'):
+                try: ret['resource_uri'] = data.get_api_url()
+                except: pass
+            
             return ret
             
         def _list(data):
@@ -106,11 +117,11 @@ class Emitter(object):
     @classmethod
     def get(cls, format):
         if format == 'xml':
-            return XMLEmitter, 'text/plain'
+            return XMLEmitter, 'text/plain; charset=utf-8'
         elif format == 'json':
-            return JSONEmitter, 'text/plain'
+            return JSONEmitter, 'text/plain; charset=utf-8'
         elif format == 'yaml':
-            return YAMLEmitter, 'text/plain'
+            return YAMLEmitter, 'text/plain; charset=utf-8'
     
 class XMLEmitter(Emitter):
     def _to_xml(self, xml, data):

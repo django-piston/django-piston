@@ -64,6 +64,3 @@ class BaseHandler(object):
             raise NotImplementedError
 
         return "I can't do this yet."
-        
-    def get_resource_uri(self, *args, **kwargs):
-        return '', ''
