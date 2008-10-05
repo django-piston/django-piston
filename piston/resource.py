@@ -51,7 +51,16 @@ class Resource(object):
             return HttpResponse("errors: %r" % errors)
         except Exception, e:
             result = e
-            
+        
+        resource_uri = self.handler.get_resource_uri(result)
+
+        # TODO: Make much more robust
+        if resource_uri: 
+            if isinstance(result, dict):
+                result['resource_uri'] = resource_uri
+            elif not isinstance(result, basestring):
+                setattr(result, 'resource_uri', resource_uri)
+        
         emitter, ct = Emitter.get(format)
         srl = emitter(result, typemapper)
         

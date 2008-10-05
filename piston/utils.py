@@ -1,4 +1,5 @@
 from django.http import HttpResponseNotAllowed, HttpResponseForbidden
+from django.core.urlresolvers import reverse
 
 class HttpForbidden(HttpResponseForbidden):
     pass
@@ -27,3 +28,12 @@ def coerce_put_post(request):
         request.method = "PUT"
         request.PUT = request.POST
         del request._post
+        
+def resource_uri(f):
+    def wrap(self, instance):
+        url_id, args = f(self, instance)
+        try:
+            return reverse(url_id, args=args)
+        except Exception, e:
+            return None
+    return wrap

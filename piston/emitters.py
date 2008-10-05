@@ -16,6 +16,9 @@ class Emitter(object):
         self.typemapper = typemapper
         self.data = payload
     
+        if isinstance(self.data, Exception):
+            raise
+    
     def construct(self):
         
         def _any(thing):
@@ -70,7 +73,11 @@ class Emitter(object):
                             
                 # try to get the remainder of fields
                 for maybe_field in want_fields:
-                    pass # do something here?
+                    maybe = getattr(data, maybe_field, None)
+
+                    if maybe:
+                        if isinstance(maybe, (int, basestring)):
+                            ret[maybe_field] = _any(maybe)
                             
             else:
 
