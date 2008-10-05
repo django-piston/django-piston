@@ -82,12 +82,7 @@ class Emitter(object):
             return [ _any(v) for v in data ]
             
         def _dict(data):
-            ret = { }
-            
-            for k, v in data.iteritems():
-                ret[k] = _any(v)
-                
-            return ret
+            return dict([ (k, _any(v)) for k, v in data.iteritems() ])
             
         return _any(self.data)
     
