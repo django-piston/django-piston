@@ -35,33 +35,30 @@ class BaseHandler(object):
     def has_model(self):
         return hasattr(self, 'model')
     
-    def get_queryset(self, *args, **kwargs):
-        """
-        Returns the queryset on which all operations operate.
-        
-        Can be used to limit the access to objects and other such 
-        things.
-        """
+    def exists(self, **kwargs):
         if not self.has_model():
             raise NotImplementedError
         
-        return self.model.objects
-    
-    def exists(self, **kwargs):
         try:
-            self.get_queryset(*args, **kwargs).get(**kwargs)
+            self.model.objects.get(**kwargs)
             return True
         except self.model.DoesNotExist:
             return False
     
     def read(self, request, *args, **kwargs):
-        return self.get_queryset(*args, **kwargs).filter(*args, **kwargs)
+        if not self.has_model():
+            raise NotImplementedError
+        
+        return self.model.objects.filter(*args, **kwargs)
     
     def create(self, request, *args, **kwargs):
+        if not self.has_model():
+            raise NotImplementedError
+        
         attrs = self.flatten_dict(request.POST)
         
         try:
-            inst = self.get_queryset(*args, **kwargs).get(**attrs)
+            inst = self.model.objects.get(**attrs)
             raise ValueError("Already exists.")
         except self.model.DoesNotExist:
             inst = self.model(attrs)
@@ -69,11 +66,17 @@ class BaseHandler(object):
             return inst
     
     def update(self, request, *args, **kwargs):
-        inst = self.get_queryset(*args, **kwargs).get(*args, **kwargs)
+        if not self.has_model():
+            raise NotImplementedError
+        
+        inst = self.model.objects.get(*args, **kwargs)
         print "must update instance", inst, "with", request.PUT
         
         return "I can't do this yet."
     
     def delete(self, request, *args, **kwargs):
+        if not self.has_model():
+            raise NotImplementedError
+        
         return "I can't do this yet."
 
