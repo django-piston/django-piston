@@ -1,4 +1,4 @@
-import types, decimal, yaml, copy
+import types, decimal, yaml, types, re
 from django.db.models.query import QuerySet
 from django.db.models import Model, permalink
 from django.utils import simplejson
@@ -12,6 +12,13 @@ except ImportError:
     import StringIO
 
 class Emitter(object):
+    """
+    Super emitter. All other emitters should subclass
+    this one. It has the `construct` method which
+    conveniently returns a serialized `dict`. This is
+    usually the only method you want to use in your
+    emitter. See below for examples.
+    """
     def __init__(self, payload, typemapper):
         self.typemapper = typemapper
         self.data = payload
@@ -20,9 +27,17 @@ class Emitter(object):
             raise
     
     def construct(self):
+        """
+        Recursively serialize a lot of types, and
+        in cases where it doesn't recognize the type,
+        it will fall back to Django's `smart_unicode`.
         
+        Returns `dict`.
+        """
         def _any(thing):
-
+            """
+            Dispatch, all types are routed through here.
+            """
             ret = None
             
             if isinstance(thing, (tuple, list, QuerySet)):
@@ -33,46 +48,70 @@ class Emitter(object):
                 ret = str(thing)
             elif isinstance(thing, Model):
                 ret = _model(thing)
-            elif isinstance(thing, unicode):
-                ret = thing.encode('utf-8')
+            elif isinstance(thing, types.FunctionType):
+                pass
             else:
-                ret = thing
+                ret = smart_unicode(thing, strings_only=True)
 
             return ret
 
         def _fk(data, field):
+            """
+            Foreign keys.
+            """
             return _any(getattr(data, field.name))
             
         def _m2m(data, field):
+            """
+            Many to many (re-route to `_model`.)
+            """
             return [ _model(m) for m in getattr(data, field.name).iterator() ]
 
         def _model(data):
+            """
+            Models. Will respect the `fields` and/or
+            `exclude` on the handler (see `typemapper`.)
+            """
             ret = { }
             
             if type(data) in self.typemapper.keys():
 
                 v = lambda f: getattr(data, f.attname)
-                want_fields = copy.copy(list(self.typemapper.get(type(data)).fields))
+                get_fields = set(self.typemapper.get(type(data)).fields)
+                exclude_fields = set(self.typemapper.get(type(data)).exclude)
+                
+                if not get_fields:
+                    get_fields = set([ f.attname.replace("_id", "", 1)
+                        for f in data._meta.fields ])
+
+                # sets can be negated.
+                for exclude in exclude_fields:
+                    if isinstance(exclude, basestring):
+                        get_fields.discard(exclude)
+                    elif isinstance(exclude, re._pattern_type):
+                        for field in get_fields.copy():
+                            if exclude.match(field):
+                                get_fields.discard(field)
                 
                 for f in data._meta.local_fields:
                     if f.serialize:
                         if not f.rel:
-                            if f.attname in want_fields:
+                            if f.attname in get_fields:
                                 ret[f.attname] = _any(v(f))
-                                want_fields.remove(f.attname)
+                                get_fields.remove(f.attname)
                         else:
-                            if f.attname[:-3] in want_fields:
+                            if f.attname[:-3] in get_fields:
                                 ret[f.name] = _fk(data, f)
-                                want_fields.remove(f.name)
+                                get_fields.remove(f.name)
 
                 for mf in data._meta.many_to_many:
                     if mf.serialize:
-                        if mf.attname in want_fields:
+                        if mf.attname in get_fields:
                             ret[mf.name] = _m2m(data, mf)
-                            want_fields.remove(mf.name)
+                            get_fields.remove(mf.name)
                             
                 # try to get the remainder of fields
-                for maybe_field in want_fields:
+                for maybe_field in get_fields:
                     maybe = getattr(data, maybe_field, None)
 
                     if maybe:
@@ -105,18 +144,31 @@ class Emitter(object):
             return ret
             
         def _list(data):
+            """
+            Lists.
+            """
             return [ _any(v) for v in data ]
             
         def _dict(data):
+            """
+            Dictionaries.
+            """
             return dict([ (k, _any(v)) for k, v in data.iteritems() ])
             
         return _any(self.data)
     
     def render(self):
+        """
+        This super emitter does not implement `render`,
+        this is a job for the specific emitter below.
+        """
         raise NotImplementedError("Please implement render.")
         
     @classmethod
     def get(cls, format):
+        """
+        Gets an emitter, returns the class and a content-type.
+        """
         if format == 'xml':
             return XMLEmitter, 'text/plain; charset=utf-8'
         elif format == 'json':
@@ -152,10 +204,17 @@ class XMLEmitter(Emitter):
         return stream.getvalue()
 
 class JSONEmitter(Emitter):
+    """
+    JSON emitter, understands timestamps.
+    """
     # TODO: callback functions
     def render(self):
         return simplejson.dumps(self.construct(), cls=DateTimeAwareJSONEncoder)
     
 class YAMLEmitter(Emitter):
+    """
+    YAML emitter, uses `safe_dump` to omit the
+    specific types when outputting to non-Python.
+    """
     def render(self):
         return yaml.safe_dump(self.construct())

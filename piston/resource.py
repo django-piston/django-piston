@@ -1,16 +1,25 @@
-"""
-Piston resource.
-"""
 from django.http import HttpResponse, Http404, HttpResponseNotAllowed, HttpResponseForbidden
 from emitters import Emitter
 from handler import typemapper
 from utils import coerce_put_post, FormValidationError
 
 class NoAuthentication(object):
+    """
+    Authentication handler that always returns
+    True, so no authentication is needed, nor
+    initiated (`challenge` is missing.)
+    """
     def is_authenticated(self, request):
         return True
 
 class Resource(object):
+    """
+    Resource. Create one for your URL mappings, just
+    like you would with Django. Takes one argument,
+    the handler. The second argument is optional, and
+    is an authentication handler. If not specified,
+    `NoAuthentication` will be used by default.
+    """
     callmap = { 'GET': 'read', 'POST': 'create', 
                 'PUT': 'update', 'DELETE': 'delete' }
 
@@ -40,8 +49,7 @@ class Resource(object):
             return HttpResponseNotAllowed(self.handler.allowed_methods)
 
         meth = getattr(self.handler, Resource.callmap.get(rm), None)
-        format = request.GET.get('format', 'json')
-        
+
         if not meth:        
             raise Http404
 
@@ -52,7 +60,7 @@ class Resource(object):
         except Exception, e:
             result = e
         
-        emitter, ct = Emitter.get(format)
+        emitter, ct = Emitter.get(request.GET.get('format', 'json'))
         srl = emitter(result, typemapper)
         
         return HttpResponse(srl.render(), mimetype=ct)

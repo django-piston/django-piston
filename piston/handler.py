@@ -1,6 +1,11 @@
 typemapper = { }
 
 class HandlerType(type):
+    """
+    Metaclass that keeps a registry of class -> handler
+    mappings. It uses a global variable, so it is *not*
+    thread-safe, although that's probably not a concern.
+    """
     def __init__(cls, name, bases, dct):
         model = dct.get('model', None)
         
@@ -10,9 +15,20 @@ class HandlerType(type):
         return super(HandlerType, cls).__init__(name, bases, dct)
 
 class BaseHandler(object):
+    """
+    Basehandler that gives you CRUD for free.
+    You are supposed to subclass this for specific
+    functionality.
+    
+    All CRUD methods (`read`/`update`/`create`/`delete`)
+    receive a request as the first argument from the
+    resource. Use this for checking `request.user`, etc.
+    """
     __metaclass__ = HandlerType
 
     allowed_methods = ('GET', 'POST', 'PUT', 'DELETE')
+    exclude = ( 'id' )
+    fields =  ( )
 
     def flatten_dict(self, dct):
         return dict([ (str(k), dct.get(k)) for k in dct.keys() ])
