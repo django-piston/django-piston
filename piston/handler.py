@@ -35,7 +35,7 @@ class BaseHandler(object):
     def has_model(self):
         return hasattr(self, 'model')
     
-    def get_queryset(self, *args, **kwargsrgs):
+    def get_queryset(self, *args, **kwargs):
         """
         Returns the queryset on which all operations operate.
         
