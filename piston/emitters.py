@@ -22,7 +22,7 @@ class Emitter(object):
     def __init__(self, payload, typemapper):
         self.typemapper = typemapper
         self.data = payload
-    
+        
         if isinstance(self.data, Exception):
             raise
     
@@ -60,13 +60,19 @@ class Emitter(object):
             Foreign keys.
             """
             return _any(getattr(data, field.name))
-            
+        
+        def _related(data):
+            """
+            Foreign keys.
+            """
+            return [ _model(m) for m in data.iterator() ]
+        
         def _m2m(data, field):
             """
             Many to many (re-route to `_model`.)
             """
             return [ _model(m) for m in getattr(data, field.name).iterator() ]
-
+        
         def _model(data):
             """
             Models. Will respect the `fields` and/or
@@ -75,7 +81,6 @@ class Emitter(object):
             ret = { }
             
             if type(data) in self.typemapper.keys():
-
                 v = lambda f: getattr(data, f.attname)
                 get_fields = set(self.typemapper.get(type(data)).fields)
                 exclude_fields = set(self.typemapper.get(type(data)).exclude)
@@ -83,7 +88,7 @@ class Emitter(object):
                 if not get_fields:
                     get_fields = set([ f.attname.replace("_id", "", 1)
                         for f in data._meta.fields ])
-
+                
                 # sets can be negated.
                 for exclude in exclude_fields:
                     if isinstance(exclude, basestring):
@@ -103,29 +108,29 @@ class Emitter(object):
                             if f.attname[:-3] in get_fields:
                                 ret[f.name] = _fk(data, f)
                                 get_fields.remove(f.name)
-
+                
                 for mf in data._meta.many_to_many:
                     if mf.serialize:
                         if mf.attname in get_fields:
                             ret[mf.name] = _m2m(data, mf)
                             get_fields.remove(mf.name)
-                            
+                
                 # try to get the remainder of fields
                 for maybe_field in get_fields:
                     maybe = getattr(data, maybe_field, None)
-
+                    
                     if maybe:
                         if isinstance(maybe, (int, basestring)):
                             ret[maybe_field] = _any(maybe)
-                            
+                        elif hasattr(maybe, 'all'): # handle related managers
+                            ret[maybe_field] = _related(maybe)
             else:
-
                 for f in data._meta.fields:
                     ret[f.attname] = _any(getattr(data, f.attname))
-
+                
                 fields = dir(data.__class__) + ret.keys()
                 add_ons = [k for k in dir(data) if k not in fields]
-            
+                
                 for k in add_ons:
                     ret[k] = _any(getattr(data, k))
             
@@ -142,7 +147,7 @@ class Emitter(object):
                 except: pass
             
             return ret
-            
+        
         def _list(data):
             """
             Lists.
