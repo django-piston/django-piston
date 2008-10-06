@@ -35,7 +35,7 @@ class BaseHandler(object):
     def has_model(self):
         return hasattr(self, 'model')
     
-    def get_queryset(self):
+    def get_queryset(self, *args, **kwargs):
         """
         Returns the queryset on which all operations operate.
         
@@ -44,14 +44,12 @@ class BaseHandler(object):
         """
         return self.model.objects
     
-    queryset = property(get_queryset)
-    
     def exists(self, **kwargs):
         if not self.has_model():
             raise NotImplementedError
         
         try:
-            self.queryset.get(**kwargs)
+            self.get_queryset(*args, **kwargs).get(**kwargs)
             return True
         except self.model.DoesNotExist:
             return False
@@ -60,7 +58,7 @@ class BaseHandler(object):
         if not self.has_model():
             raise NotImplementedError
         
-        return self.queryset.filter(*args, **kwargs)
+        return self.get_queryset(*args, **kwargs).filter(*args, **kwargs)
     
     def create(self, request, *args, **kwargs):
         if not self.has_model():
@@ -69,7 +67,7 @@ class BaseHandler(object):
         attrs = self.flatten_dict(request.POST)
         
         try:
-            inst = self.queryset.get(**attrs)
+            inst = self.get_queryset(*args, **kwargs).get(**attrs)
             raise ValueError("Already exists.")
         except self.model.DoesNotExist:
             inst = self.model(attrs)
@@ -80,7 +78,7 @@ class BaseHandler(object):
         if not self.has_model():
             raise NotImplementedError
         
-        inst = self.queryset.get(*args, **kwargs)
+        inst = self.get_queryset(*args, **kwargs).get(*args, **kwargs)
         print "must update instance", inst, "with", request.PUT
         
         return "I can't do this yet."
