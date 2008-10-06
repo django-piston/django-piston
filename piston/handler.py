@@ -79,7 +79,7 @@ class BaseHandler(object):
     def update(self, request, *args, **kwargs):
         if not self.has_model():
             raise NotImplementedError
-            
+        
         inst = self.queryset.get(*args, **kwargs)
         print "must update instance", inst, "with", request.PUT
         
@@ -90,3 +90,4 @@ class BaseHandler(object):
             raise NotImplementedError
         
         return "I can't do this yet."
+
