@@ -42,12 +42,12 @@ class BaseHandler(object):
         Can be used to limit the access to objects and other such 
         things.
         """
-        return self.model.objects
-    
-    def exists(self, **kwargs):
         if not self.has_model():
             raise NotImplementedError
         
+        return self.model.objects
+    
+    def exists(self, **kwargs):
         try:
             self.get_queryset(*args, **kwargs).get(**kwargs)
             return True
@@ -55,15 +55,9 @@ class BaseHandler(object):
             return False
     
     def read(self, request, *args, **kwargs):
-        if not self.has_model():
-            raise NotImplementedError
-        
         return self.get_queryset(*args, **kwargs).filter(*args, **kwargs)
     
     def create(self, request, *args, **kwargs):
-        if not self.has_model():
-            raise NotImplementedError
-        
         attrs = self.flatten_dict(request.POST)
         
         try:
@@ -75,17 +69,11 @@ class BaseHandler(object):
             return inst
     
     def update(self, request, *args, **kwargs):
-        if not self.has_model():
-            raise NotImplementedError
-        
         inst = self.get_queryset(*args, **kwargs).get(*args, **kwargs)
         print "must update instance", inst, "with", request.PUT
         
         return "I can't do this yet."
     
     def delete(self, request, *args, **kwargs):
-        if not self.has_model():
-            raise NotImplementedError
-        
         return "I can't do this yet."
 
