@@ -1,18 +1,17 @@
 typemapper = { }
 
-class HandlerType(type):
+class HandlerMetaClass(type):
     """
     Metaclass that keeps a registry of class -> handler
-    mappings. It uses a global variable, so it is *not*
-    thread-safe, although that's probably not a concern.
+    mappings.
     """
-    def __init__(cls, name, bases, dct):
-        model = dct.get('model', None)
+    def __new__(cls, name, bases, attrs):
+        new_cls = type.__new__(cls, name, bases, attrs)
         
-        if model:
-            typemapper[model] = cls
+        if hasattr(new_cls, 'model'):
+            typemapper[new_cls.model] = new_cls
         
-        return super(HandlerType, cls).__init__(name, bases, dct)
+        return new_cls
 
 class BaseHandler(object):
     """
@@ -24,59 +23,70 @@ class BaseHandler(object):
     receive a request as the first argument from the
     resource. Use this for checking `request.user`, etc.
     """
-    __metaclass__ = HandlerType
-
+    __metaclass__ = HandlerMetaClass
+    
     allowed_methods = ('GET', 'POST', 'PUT', 'DELETE')
     exclude = ( 'id' )
     fields =  ( )
-
+    
     def flatten_dict(self, dct):
         return dict([ (str(k), dct.get(k)) for k in dct.keys() ])
-
+    
     def has_model(self):
         return hasattr(self, 'model')
-
-    def exists(self, **kwa):
+    
+    def get_queryset(self, *args, **kwargsrgs):
+        """
+        Returns the queryset on which all operations operate.
+        
+        Can be used to limit the access to objects and other such 
+        things.
+        """
+        return self.model.objects
+    
+    queryset = property(get_queryset)
+    
+    def exists(self, **kwargs):
         if not self.has_model():
             raise NotImplementedError
-            
+        
         try:
-            self.model.objects.get(**kwa)
+            self.queryset.get(**kwargs)
             return True
         except self.model.DoesNotExist:
             return False
-
-    def read(self, request, *a, **kwa):
-        if not self.has_model():
-            raise NotImplementedError
-
-        return self.model.objects.filter(*a, **kwa)
-        
-    def create(self, request, *a, **kwa):
-        if not self.has_model():
-            raise NotImplementedError
     
+    def read(self, request, *args, **kwargs):
+        if not self.has_model():
+            raise NotImplementedError
+        
+        return self.queryset.filter(*args, **kwargs)
+    
+    def create(self, request, *args, **kwargs):
+        if not self.has_model():
+            raise NotImplementedError
+        
         attrs = self.flatten_dict(request.POST)
-
+        
         try:
-            inst = self.model.objects.get(**attrs)
+            inst = self.queryset.get(**attrs)
             raise ValueError("Already exists.")
         except self.model.DoesNotExist:
             inst = self.model(attrs)
             inst.save()
             return inst
-            
-    def update(self, request, *a, **kwa):
+    
+    def update(self, request, *args, **kwargs):
         if not self.has_model():
             raise NotImplementedError
             
-        inst = self.model.objects.get(*a, **kwa)
+        inst = self.queryset.get(*args, **kwargs)
         print "must update instance", inst, "with", request.PUT
-
+        
         return "I can't do this yet."
-
-    def delete(self, request, *a, **kwa):
+    
+    def delete(self, request, *args, **kwargs):
         if not self.has_model():
             raise NotImplementedError
-
+        
         return "I can't do this yet."
