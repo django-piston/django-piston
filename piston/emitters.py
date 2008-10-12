@@ -34,7 +34,7 @@ class Emitter(object):
         
         Returns `dict`.
         """
-        def _any(thing):
+        def _any(thing, fields=()):
             """
             Dispatch, all types are routed through here.
             """
@@ -47,7 +47,7 @@ class Emitter(object):
             elif isinstance(thing, decimal.Decimal):
                 ret = str(thing)
             elif isinstance(thing, Model):
-                ret = _model(thing)
+                ret = _model(thing, fields=())
             elif isinstance(thing, types.FunctionType):
                 pass
             else:
@@ -61,43 +61,50 @@ class Emitter(object):
             """
             return _any(getattr(data, field.name))
         
-        def _related(data):
+        def _related(data, fields=()):
             """
             Foreign keys.
             """
-            return [ _model(m) for m in data.iterator() ]
+            return [ _model(m, fields) for m in data.iterator() ]
         
-        def _m2m(data, field):
+        def _m2m(data, field, fields=()):
             """
             Many to many (re-route to `_model`.)
             """
-            return [ _model(m) for m in getattr(data, field.name).iterator() ]
+            return [ _model(m, fields) for m in getattr(data, field.name).iterator() ]
         
-        def _model(data):
+        def _model(data, fields=()):
             """
             Models. Will respect the `fields` and/or
             `exclude` on the handler (see `typemapper`.)
             """
             ret = { }
             
-            if type(data) in self.typemapper.keys():
+            if type(data) in self.typemapper.keys() or fields:
+
                 v = lambda f: getattr(data, f.attname)
-                get_fields = set(self.typemapper.get(type(data)).fields)
-                exclude_fields = set(self.typemapper.get(type(data)).exclude)
+
+                if not fields:
+                    get_fields = set(self.typemapper.get(type(data)).fields)
+                    exclude_fields = set(self.typemapper.get(type(data)).exclude)
                 
-                if not get_fields:
-                    get_fields = set([ f.attname.replace("_id", "", 1)
-                        for f in data._meta.fields ])
+                    if not get_fields:
+                        get_fields = set([ f.attname.replace("_id", "", 1)
+                            for f in data._meta.fields ])
                 
-                # sets can be negated.
-                for exclude in exclude_fields:
-                    if isinstance(exclude, basestring):
-                        get_fields.discard(exclude)
-                    elif isinstance(exclude, re._pattern_type):
-                        for field in get_fields.copy():
-                            if exclude.match(field):
-                                get_fields.discard(field)
-                
+                    # sets can be negated.
+                    for exclude in exclude_fields:
+                        if isinstance(exclude, basestring):
+                            get_fields.discard(exclude)
+                        elif isinstance(exclude, re._pattern_type):
+                            for field in get_fields.copy():
+                                if exclude.match(field):
+                                    get_fields.discard(field)
+                                    
+                else:
+
+                    get_fields = set(fields)
+
                 for f in data._meta.local_fields:
                     if f.serialize:
                         if not f.rel:
@@ -117,13 +124,23 @@ class Emitter(object):
                 
                 # try to get the remainder of fields
                 for maybe_field in get_fields:
-                    maybe = getattr(data, maybe_field, None)
-                    
-                    if maybe:
-                        if isinstance(maybe, (int, basestring)):
-                            ret[maybe_field] = _any(maybe)
-                        elif hasattr(maybe, 'all'): # handle related managers
-                            ret[maybe_field] = _related(maybe)
+
+                    if isinstance(maybe_field, (list, tuple)):
+                        model, fields = maybe_field
+                        inst = getattr(data, model, None)
+
+                        if inst:
+                            if hasattr(inst, 'all'):
+                                ret[model] = _related(inst, fields)
+                            else:
+                                ret[model] = _model(inst, fields)
+
+                    else:                    
+                        maybe = getattr(data, maybe_field, None)
+                        if maybe:
+                            if isinstance(maybe, (int, basestring)):
+                                ret[maybe_field] = _any(maybe)
+
             else:
                 for f in data._meta.fields:
                     ret[f.attname] = _any(getattr(data, f.attname))
