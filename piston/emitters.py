@@ -163,6 +163,11 @@ class Emitter(object):
                 try: ret['resource_uri'] = data.get_api_url()
                 except: pass
             
+            # absolute uri
+            if hasattr(data, 'get_absolute_url'):
+                try: ret['absolute_uri'] = data.get_absolute_url()
+                except: pass
+            
             return ret
         
         def _list(data):

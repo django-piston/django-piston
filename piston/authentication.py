@@ -1,5 +1,9 @@
 from django.http import HttpResponse
 from django.contrib.auth.models import User
+from django.contrib.auth.decorators import login_required
+from django.conf import settings
+
+import oauth
 
 def django_auth(username, password):
     try:
@@ -52,4 +56,148 @@ class HttpBasicAuthentication(object):
         resp['WWW-Authenticate'] = 'Basic realm="%s"' % self.realm
         resp.status_code = 401
         return resp
+
+
+from store import DataStore
+
+OAUTH_REALM_KEY_NAME = 'OAUTH_REALM_KEY_NAME'
+
+def initialize_server_request(request):
+    """Shortcut for initialization."""
+    oauth_request = oauth.OAuthRequest.from_request(request.method, 
+                                                    request.build_absolute_uri(), 
+                                                    headers=request.META,
+                                                    parameters=dict(request.REQUEST.items()),
+                                                    query_string=request.environ.get('QUERY_STRING', ''))
+    if oauth_request:
+        oauth_server = oauth.OAuthServer(DataStore(oauth_request))
+        oauth_server.add_signature_method(oauth.OAuthSignatureMethod_PLAINTEXT())
+        oauth_server.add_signature_method(oauth.OAuthSignatureMethod_HMAC_SHA1())
+    else:
+        oauth_server = None
+        
+    return oauth_server, oauth_request
+
+def send_oauth_error(err=None):
+    """Shortcut for sending an error."""
+    # send a 401 error
+    response = HttpResponse(err.message.encode('utf-8'))
+    response.status_code = 401
+    # return the authenticate header
+    realm = getattr(settings, OAUTH_REALM_KEY_NAME, 'Realm something')
+    header = oauth.build_authenticate_header(realm=realm)
+    for k, v in header.iteritems():
+        response[k] = v
+    return response
+
+def oauth_request_token(request):
+    oauth_server, oauth_request = initialize_server_request(request)
+    
+    if oauth_server is None:
+        return INVALID_PARAMS_RESPONSE
+    try:
+        # create a request token
+        token = oauth_server.fetch_request_token(oauth_request)
+        # return the token
+        response = HttpResponse(token.to_string())
+    except oauth.OAuthError, err:
+        response = send_oauth_error(err)
+    return response
+
+def oauth_auth_view(request, token, callback, params):
+    return HttpResponse("Just a fake view for auth.")
+
+@login_required
+def oauth_user_auth(request):
+    oauth_server, oauth_request = initialize_server_request(request)
+    
+    if oauth_request is None:
+        return INVALID_PARAMS_RESPONSE
+        
+    try:
+        token = oauth_server.fetch_request_token(oauth_request)
+    except oath.OAuthError, err:
+        return send_oauth_error(err)
+        
+    try:
+        callback = oauth_server.get_callback(oauth_request)
+    except:
+        callback = None
+        
+    if request.method == "GET":
+        request.session['oauth'] = token.key
+        params = oauth_request.get_normalized_parameters()
+        return oauth_auth_view(request, token, callback, params)
+    elif request.method == "POST":
+        if request.session.get('oauth', '') == token.key:
+            request.session['oauth'] = ''
+            
+            try:
+                if int(request.POST.get('authorize_access')):
+                    token = oauth_server.authorize_token(token, request.user)
+                    args = token.to_string(only_key=True)
+                else:
+                    args = 'error=%s' % 'Access not granted by user.'
+                
+                response = HttpResponse('Fake callback.')
+                    
+            except OAuthError, err:
+                response = send_oauth_error(err)
+        else:
+            response = HttpResponse('Action not allowed.')
+            
+        return response
+
+def oauth_access_token(request):
+    oauth_server, oauth_request = initialize_server_request(request)
+    
+    if oauth_request is None:
+        return INVALID_PARAMS_RESPONSE
+        
+    try:
+        token = oauth_server.fetch_access_token(oauth_request)
+        return HttpResponse(token.to_string())
+    except oauth.OAuthError, err:
+        return send_oauth_error(err)
+
+def oauth_protected_area(request):
+    oauth_server, oauth_request = initialize_server_request(request)
+
+    try:
+        consumer, token, parameters = oauth_server.verify_request(oauth_request)
+        return HttpResponse("protected resource, consumer=%s, token=%s, parameters=%s, you are=%s" % (consumer, token, parameters, token.user))
+    except oauth.OAuthError, err:
+        return send_oauth_error(err)
+
+    return HttpResponse("OK = %s" % ok)
+                
+INVALID_PARAMS_RESPONSE = send_oauth_error(oauth.OAuthError('Invalid request parameters.'))
+                
+class OAuthAuthentication(object):
+    """
+    OAuth authentication. Based on work by Leah Culver.
+    """
+    def __init__(self, realm='Bitbucket.org HTTP'):
+        self.realm = realm
+    
+    def is_authenticated(self, request):
+        oauth_server, oauth_request = initialize_server_request(request)
+
+        if oauth_request is None:
+            return False
+
+        token = oauth_server.fetch_request_token(oauth_request)
+        callback = oauth_server.get_callback(oauth_request)
+        
+        print token
+        print token.to_string()
+        print callback
+        
+        return False
+        
+    def challenge(self):
+        return INVALID_PARAMS_RESPONSE
+        
+    
+        
         
