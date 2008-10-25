@@ -84,7 +84,7 @@ def send_oauth_error(err=None):
     response = HttpResponse(err.message.encode('utf-8'))
     response.status_code = 401
     # return the authenticate header
-    realm = getattr(settings, OAUTH_REALM_KEY_NAME, 'Realm something')
+    realm = getattr(settings, OAUTH_REALM_KEY_NAME, 'Bitbucket.org OAuth')
     header = oauth.build_authenticate_header(realm=realm)
     for k, v in header.iteritems():
         response[k] = v
@@ -181,23 +181,49 @@ class OAuthAuthentication(object):
         self.realm = realm
     
     def is_authenticated(self, request):
-        oauth_server, oauth_request = initialize_server_request(request)
+        if self.is_valid_request(request):
+            try:
+                consumer, token, parameters = self.validate_token(request)
+            except oauth.OAuthError, err:
+                print send_oauth_error(err)
+                return False
 
-        if oauth_request is None:
-            return False
-
-        token = oauth_server.fetch_request_token(oauth_request)
-        callback = oauth_server.get_callback(oauth_request)
-        
-        print token
-        print token.to_string()
-        print callback
-        
+            if consumer and token:
+                request.user = token.user
+                return True
+                
         return False
         
     def challenge(self):
         return INVALID_PARAMS_RESPONSE
         
-    
+    @staticmethod
+    def is_valid_request(request):
+        try:
+            auth_params = request.META["HTTP_AUTHORIZATION"]
+        except KeyError:
+            in_auth = False
+        else:
+            in_auth = 'oauth_consumer_key' in auth_params \
+                and 'oauth_token' in auth_params \
+                and 'oauth_signature_method' in auth_params \
+                and 'oauth_signature' in auth_params \
+                and 'oauth_timestamp' in auth_params \
+                and 'oauth_nonce' in auth_params
+               
+        # also try the request, which covers POST and GET
+        req_params = request.REQUEST
+        in_req = 'oauth_consumer_key' in req_params \
+            and 'oauth_token' in req_params \
+            and 'oauth_signature_method' in req_params \
+            and 'oauth_signature' in req_params \
+            and 'oauth_timestamp' in req_params \
+            and 'oauth_nonce' in req_params
+             
+        return in_auth or in_req
         
+    @staticmethod
+    def validate_token(request, check_timestamp=True, check_nonce=True):
+        oauth_server, oauth_request = initialize_server_request(request)
+        return oauth_server.verify_request(oauth_request)
         
