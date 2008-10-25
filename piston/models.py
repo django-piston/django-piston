@@ -1,6 +1,7 @@
 import urllib
 from django.db import models
 from django.contrib.auth.models import User
+from django.contrib import admin
 
 from managers import TokenManager, ConsumerManager, ResourceManager
 
@@ -15,6 +16,7 @@ class Nonce(models.Model):
     def __unicode__(self):
         return u"Nonce %s for %s" % (self.key, self.consumer_key)
 
+admin.site.register(Nonce)
 
 class Resource(models.Model):
     name = models.CharField(max_length=255)
@@ -26,6 +28,7 @@ class Resource(models.Model):
     def __unicode__(self):
         return u"Resource %s with url %s" % (self.name, self.url)
 
+admin.site.register(Resource)
 
 class Consumer(models.Model):
     name = models.CharField(max_length=255)
@@ -50,6 +53,7 @@ class Consumer(models.Model):
         self.secret = secret
         self.save()
 
+admin.site.register(Consumer)
 
 class Token(models.Model):
     REQUEST = 1
@@ -62,9 +66,8 @@ class Token(models.Model):
     timestamp = models.IntegerField()
     is_approved = models.BooleanField(default=False)
     
-    user = models.ForeignKey(User, null=True, blank=True)
+    user = models.ForeignKey(User, null=True, blank=True, related_name='tokens')
     consumer = models.ForeignKey(Consumer)
-#    resource = models.ForeignKey(Resource)
     
     objects = TokenManager()
     
@@ -90,3 +93,5 @@ class Token(models.Model):
         self.key = key
         self.secret = secret
         self.save()
+        
+admin.site.register(Token)
