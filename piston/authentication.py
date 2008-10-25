@@ -1,11 +1,20 @@
 from django.http import HttpResponse
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
+from django.template import loader
 from django.conf import settings
 
 import oauth
+from store import DataStore
 
 def django_auth(username, password):
+    """
+    Basic callback for `HttpBasicAuthentication`
+    which checks the username and password up
+    against Djangos built-in authentication system.
+    
+    On success, returns the `User`, *not* boolean!
+    """
     try:
         user = User.objects.get(username=username)
         if user.check_password(password):
@@ -57,18 +66,13 @@ class HttpBasicAuthentication(object):
         resp.status_code = 401
         return resp
 
-
-from store import DataStore
-
-OAUTH_REALM_KEY_NAME = 'OAUTH_REALM_KEY_NAME'
-
 def initialize_server_request(request):
     """Shortcut for initialization."""
-    oauth_request = oauth.OAuthRequest.from_request(request.method, 
-                                                    request.build_absolute_uri(), 
-                                                    headers=request.META,
-                                                    parameters=dict(request.REQUEST.items()),
-                                                    query_string=request.environ.get('QUERY_STRING', ''))
+    oauth_request = oauth.OAuthRequest.from_request(
+        request.method, request.build_absolute_uri(), 
+        headers=request.META, parameters=dict(request.REQUEST.items()),
+        query_string=request.environ.get('QUERY_STRING', ''))
+        
     if oauth_request:
         oauth_server = oauth.OAuthServer(DataStore(oauth_request))
         oauth_server.add_signature_method(oauth.OAuthSignatureMethod_PLAINTEXT())
@@ -84,7 +88,7 @@ def send_oauth_error(err=None):
     response = HttpResponse(err.message.encode('utf-8'))
     response.status_code = 401
     # return the authenticate header
-    realm = getattr(settings, OAUTH_REALM_KEY_NAME, 'Bitbucket.org OAuth')
+    realm = 'Bitbucket.org OAuth'
     header = oauth.build_authenticate_header(realm=realm)
     for k, v in header.iteritems():
         response[k] = v
@@ -179,13 +183,20 @@ class OAuthAuthentication(object):
     """
     def __init__(self, realm='Bitbucket.org HTTP'):
         self.realm = realm
+        self.builder = oauth.build_authenticate_header
     
     def is_authenticated(self, request):
+        """
+        Checks whether a means of specifying authentication
+        is provided, and if so, if it is a valid token.
+        
+        Read the documentation on `HttpBasicAuthentication`
+        for more information about what goes on here.
+        """
         if self.is_valid_request(request):
             try:
                 consumer, token, parameters = self.validate_token(request)
             except oauth.OAuthError, err:
-                print send_oauth_error(err)
                 return False
 
             if consumer and token:
@@ -195,32 +206,48 @@ class OAuthAuthentication(object):
         return False
         
     def challenge(self):
-        return INVALID_PARAMS_RESPONSE
+        """
+        Returns a 401 response with a small bit on
+        what OAuth is, and where to learn more about it.
+        
+        When this was written, browsers did not understand
+        OAuth authentication on the browser side, and hence
+        the helpful template we render. Maybe some day in the
+        future, browsers will take care of this stuff for us
+        and understand the 401 with the realm we give it.
+        """
+        response = HttpResponse()
+        response.status_code = 401
+        realm = 'Bitbucket.org OAuth'
+
+        for k, v in self.builder(realm=realm).iteritems():
+            response[k] = v
+
+        tmpl = loader.render_to_string('oauth/challenge.html',
+            { 'MEDIA_URL': settings.MEDIA_URL })
+
+        response.content = tmpl
+
+        return response
         
     @staticmethod
     def is_valid_request(request):
-        try:
-            auth_params = request.META["HTTP_AUTHORIZATION"]
-        except KeyError:
-            in_auth = False
-        else:
-            in_auth = 'oauth_consumer_key' in auth_params \
-                and 'oauth_token' in auth_params \
-                and 'oauth_signature_method' in auth_params \
-                and 'oauth_signature' in auth_params \
-                and 'oauth_timestamp' in auth_params \
-                and 'oauth_nonce' in auth_params
-               
-        # also try the request, which covers POST and GET
+        """
+        Checks whether the required parameters are either in
+        the http-authorization header sent by some clients,
+        which is by the way the preferred method according to
+        OAuth spec, but otherwise fall back to `GET` and `POST`.
+        """
+        must_have = [ 'oauth_'+s for s in [
+            'consumer_key', 'token', 'signature',
+            'signature_method', 'timestamp', 'nonce' ] ]
+        
+        is_in = lambda l: False not in [ (p in l) for p in must_have ]
+
+        auth_params = request.META.get("HTTP_AUTHORIZATION", "")
         req_params = request.REQUEST
-        in_req = 'oauth_consumer_key' in req_params \
-            and 'oauth_token' in req_params \
-            and 'oauth_signature_method' in req_params \
-            and 'oauth_signature' in req_params \
-            and 'oauth_timestamp' in req_params \
-            and 'oauth_nonce' in req_params
              
-        return in_auth or in_req
+        return is_in(auth_params) or is_in(req_params)
         
     @staticmethod
     def validate_token(request, check_timestamp=True, check_nonce=True):
