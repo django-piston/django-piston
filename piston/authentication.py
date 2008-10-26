@@ -197,6 +197,7 @@ class OAuthAuthentication(object):
             try:
                 consumer, token, parameters = self.validate_token(request)
             except oauth.OAuthError, err:
+                print send_oauth_error(err)
                 return False
 
             if consumer and token:

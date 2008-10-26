@@ -177,8 +177,8 @@ class OAuthRequest(object):
             parameters = {}
 
         # headers
-        if headers and 'Authorization' in headers:
-            auth_header = headers['Authorization']
+        if headers and 'HTTP_AUTHORIZATION' in headers:
+            auth_header = headers['HTTP_AUTHORIZATION']
             # check that the authorization header is OAuth
             if auth_header.index('OAuth') > -1:
                 try:
