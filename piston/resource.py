@@ -53,6 +53,11 @@ class Resource(object):
         if not meth:
             raise Http404
         
+        # Clean up the request object a bit, since we might
+        # very well have `oauth_`-headers in there, and we
+        # don't want to pass these along to the handler.
+        request = self.cleanup_request(request)
+        
         try:
             result = meth(request, *args, **kwargs)
         except FormValidationError, errors:
@@ -65,3 +70,23 @@ class Resource(object):
         
         return HttpResponse(srl.render(), mimetype=ct)
 
+    @staticmethod
+    def cleanup_request(request):
+        """
+        Removes `oauth_` keys from various dicts on the
+        request object, and returns the sanitized version.
+        """
+        for method_type in [ 'GET', 'PUT', 'POST', 'DELETE' ]:
+            block = getattr(request, method_type, { })
+
+            if True in [ k.startswith("oauth_") for k in block.keys() ]:
+                sanitized = block.copy()
+                
+                for k in sanitized.keys():
+                    if k.startswith("oauth_"):
+                        sanitized.pop(k)
+                        
+                setattr(request, method_type, sanitized)
+
+        return request
+        

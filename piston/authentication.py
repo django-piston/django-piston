@@ -202,7 +202,10 @@ class OAuthAuthentication(object):
             if consumer and token:
                 request.user = token.user
                 return True
-                
+        else:
+            print "INVALID REQUEST"
+            print request
+            
         return False
         
     def challenge(self):
