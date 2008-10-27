@@ -1,4 +1,5 @@
 from django.http import HttpResponse, Http404, HttpResponseNotAllowed, HttpResponseForbidden
+from django.views.decorators.vary import vary_on_headers
 from emitters import Emitter
 from handler import typemapper
 from utils import coerce_put_post, FormValidationError
@@ -34,7 +35,12 @@ class Resource(object):
         else:
             self.authentication = authentication
     
+    @vary_on_headers('Authorization')
     def __call__(self, request, *args, **kwargs):
+        """
+        NB: Sends a `Vary` header so we don't cache requests
+        that are different (OAuth stuff in `Authorization` header.)
+        """
         if not self.authentication.is_authenticated(request):
             return self.authentication.challenge()
         
