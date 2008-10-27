@@ -35,6 +35,12 @@ class BaseHandler(object):
     def has_model(self):
         return hasattr(self, 'model')
     
+    def value_from_tuple(tu, name):
+        for int_, n in tu:
+            if n == name:
+                return int_
+        return None
+    
     def exists(self, **kwargs):
         if not self.has_model():
             raise NotImplementedError

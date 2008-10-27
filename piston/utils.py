@@ -1,6 +1,13 @@
 from django.http import HttpResponseNotAllowed, HttpResponseForbidden
 from django.core.urlresolvers import reverse
 
+class rc(object):
+    """
+    Status codes.
+    """
+    ALL_OK = 'ok.'
+    DUPLICATE_ENTRY = 'already exists.'
+
 class HttpForbidden(HttpResponseForbidden):
     pass
 
