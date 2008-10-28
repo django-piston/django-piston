@@ -19,9 +19,10 @@ class Emitter(object):
     usually the only method you want to use in your
     emitter. See below for examples.
     """
-    def __init__(self, payload, typemapper):
+    def __init__(self, payload, typemapper, fields=()):
         self.typemapper = typemapper
         self.data = payload
+        self.fields = fields
         
         if isinstance(self.data, Exception):
             raise
@@ -47,7 +48,7 @@ class Emitter(object):
             elif isinstance(thing, decimal.Decimal):
                 ret = str(thing)
             elif isinstance(thing, Model):
-                ret = _model(thing, fields=())
+                ret = _model(thing, fields=fields)
             elif isinstance(thing, types.FunctionType):
                 pass
             else:
@@ -182,7 +183,7 @@ class Emitter(object):
             """
             return dict([ (k, _any(v)) for k, v in data.iteritems() ])
             
-        return _any(self.data)
+        return _any(self.data, self.fields)
     
     def render(self):
         """

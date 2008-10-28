@@ -42,7 +42,12 @@ class Resource(object):
         that are different (OAuth stuff in `Authorization` header.)
         """
         if not self.authentication.is_authenticated(request):
-            return self.authentication.challenge()
+            if self.handler.anonymous and callable(self.handler.anonymous):
+                handler = self.handler.anonymous()
+            else:
+                return self.authentication.challenge()
+        else:
+            handler = self.handler
         
         rm = request.method.upper()
         
@@ -51,10 +56,10 @@ class Resource(object):
         if rm == "PUT":
             coerce_put_post(request)
         
-        if not rm in self.handler.allowed_methods:
-            return HttpResponseNotAllowed(self.handler.allowed_methods)
+        if not rm in handler.allowed_methods:
+            return HttpResponseNotAllowed(handler.allowed_methods)
         
-        meth = getattr(self.handler, Resource.callmap.get(rm), None)
+        meth = getattr(handler, Resource.callmap.get(rm), None)
         
         if not meth:
             raise Http404
@@ -72,7 +77,7 @@ class Resource(object):
             result = e
         
         emitter, ct = Emitter.get(request.GET.get('format', 'json'))
-        srl = emitter(result, typemapper)
+        srl = emitter(result, typemapper, handler.fields)
         
         return HttpResponse(srl.render(), mimetype=ct)
 

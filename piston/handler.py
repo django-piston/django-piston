@@ -13,6 +13,12 @@ class HandlerMetaClass(type):
         
         return new_cls
 
+class AnonymousBaseHandler(object):
+    """
+    Anonymous handler.
+    """
+    allowed_methods = ('GET',)
+    
 class BaseHandler(object):
     """
     Basehandler that gives you CRUD for free.
@@ -26,6 +32,7 @@ class BaseHandler(object):
     __metaclass__ = HandlerMetaClass
     
     allowed_methods = ('GET', 'POST', 'PUT', 'DELETE')
+    anonymous = False
     exclude = ( 'id' )
     fields =  ( )
     
