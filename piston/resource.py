@@ -2,7 +2,7 @@ from django.http import HttpResponse, Http404, HttpResponseNotAllowed, HttpRespo
 from django.views.decorators.vary import vary_on_headers
 from emitters import Emitter
 from handler import typemapper
-from utils import coerce_put_post, FormValidationError
+from utils import coerce_put_post, FormValidationError, HttpStatusCode
 
 class NoAuthentication(object):
     """
@@ -78,8 +78,11 @@ class Resource(object):
         
         emitter, ct = Emitter.get(request.GET.get('format', 'json'))
         srl = emitter(result, typemapper, handler.fields)
-        
-        return HttpResponse(srl.render(), mimetype=ct)
+
+        try:
+            return HttpResponse(srl.render(request), mimetype=ct)
+        except HttpStatusCode, e:
+            return HttpResponse(e.message, status=e.code)
 
     @staticmethod
     def cleanup_request(request):

@@ -5,6 +5,8 @@ from django.utils import simplejson
 from django.utils.xmlutils import SimplerXMLGenerator
 from django.utils.encoding import smart_unicode
 from django.core.serializers.json import DateTimeAwareJSONEncoder
+from django.http import HttpResponse
+from utils import HttpStatusCode
 
 try:
     import cStringIO as StringIO
@@ -49,6 +51,8 @@ class Emitter(object):
                 ret = str(thing)
             elif isinstance(thing, Model):
                 ret = _model(thing, fields=fields)
+            elif isinstance(thing, HttpResponse):
+                raise HttpStatusCode(thing.content, code=thing.status_code)
             elif isinstance(thing, types.FunctionType):
                 pass
             else:
@@ -198,11 +202,11 @@ class Emitter(object):
         Gets an emitter, returns the class and a content-type.
         """
         if format == 'xml':
-            return XMLEmitter, 'text/plain; charset=utf-8'
+            return XMLEmitter, 'text/xml; charset=utf-8'
         elif format == 'json':
-            return JSONEmitter, 'text/plain; charset=utf-8'
+            return JSONEmitter, 'application/json; charset=utf-8'
         elif format == 'yaml':
-            return YAMLEmitter, 'text/plain; charset=utf-8'
+            return YAMLEmitter, 'application/x-yaml; charset=utf-8'
     
 class XMLEmitter(Emitter):
     def _to_xml(self, xml, data):
@@ -217,7 +221,7 @@ class XMLEmitter(Emitter):
         elif data:
             xml.characters(smart_unicode(data))
 
-    def render(self):
+    def render(self, request):
         stream = StringIO.StringIO()
         
         xml = SimplerXMLGenerator(stream, "utf-8")
@@ -235,14 +239,20 @@ class JSONEmitter(Emitter):
     """
     JSON emitter, understands timestamps.
     """
-    # TODO: callback functions
-    def render(self):
-        return simplejson.dumps(self.construct(), cls=DateTimeAwareJSONEncoder)
+    def render(self, request):
+        cb = request.GET.get('callback')
+        seria = simplejson.dumps(self.construct(), cls=DateTimeAwareJSONEncoder)
+
+        # Callback
+        if cb:
+            return '%s(%s)' % (cb, seria)
+
+        return seria
     
 class YAMLEmitter(Emitter):
     """
     YAML emitter, uses `safe_dump` to omit the
     specific types when outputting to non-Python.
     """
-    def render(self):
+    def render(self, request):
         return yaml.safe_dump(self.construct())
