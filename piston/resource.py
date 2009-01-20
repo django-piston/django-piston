@@ -71,8 +71,8 @@ class Resource(object):
         
         try:
             result = meth(request, *args, **kwargs)
-        except FormValidationError, errors:
-            return HttpResponse("errors: %r" % errors)
+        except FormValidationError, form:
+            return HttpResponse("Bad Request: %s" % form.errors, status=400)
         except Exception, e:
             result = e
         
