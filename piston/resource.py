@@ -77,7 +77,7 @@ class Resource(object):
             result = e
         
         emitter, ct = Emitter.get(request.GET.get('format', 'json'))
-        srl = emitter(result, typemapper, handler.fields)
+        srl = emitter(result, typemapper, handler, handler.fields)
 
         try:
             return HttpResponse(srl.render(request), mimetype=ct)

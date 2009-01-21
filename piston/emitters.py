@@ -1,4 +1,4 @@
-import types, decimal, yaml, types, re
+import types, decimal, yaml, types, re, inspect
 from django.db.models.query import QuerySet
 from django.db.models import Model, permalink
 from django.utils import simplejson
@@ -21,9 +21,10 @@ class Emitter(object):
     usually the only method you want to use in your
     emitter. See below for examples.
     """
-    def __init__(self, payload, typemapper, fields=()):
+    def __init__(self, payload, typemapper, handler, fields=()):
         self.typemapper = typemapper
         self.data = payload
+        self.handler = handler
         self.fields = fields
         
         if isinstance(self.data, Exception):
@@ -54,7 +55,8 @@ class Emitter(object):
             elif isinstance(thing, HttpResponse):
                 raise HttpStatusCode(thing.content, code=thing.status_code)
             elif isinstance(thing, types.FunctionType):
-                pass
+                if not inspect.getargspec(thing)[0]:
+                    ret = _any(thing())
             else:
                 ret = smart_unicode(thing, strings_only=True)
 
@@ -107,7 +109,6 @@ class Emitter(object):
                                     get_fields.discard(field)
                                     
                 else:
-
                     get_fields = set(fields)
 
                 for f in data._meta.local_fields:
@@ -145,6 +146,11 @@ class Emitter(object):
                         if maybe:
                             if isinstance(maybe, (int, basestring)):
                                 ret[maybe_field] = _any(maybe)
+                        else:
+                            handler_f = getattr(self.handler, maybe_field, None)
+
+                            if handler_f:
+                                ret[maybe_field] = handler_f(self.data)                            
 
             else:
                 for f in data._meta.fields:
