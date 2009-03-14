@@ -11,6 +11,7 @@ class rc(object):
     ALL_OK = create_reply('OK', status=200)
     CREATED = create_reply('Created', status=201)
     DELETED = create_reply('', status=204) # 204 says "Don't send a body!"
+    BAD_REQUEST = create_reply('Bad Request', status=400)
     FORBIDDEN = create_reply('Forbidden', status=401)
     DUPLICATE_ENTRY = create_reply('Conflict', status=409)
     NOT_HERE = create_reply('Gone', status=410)
