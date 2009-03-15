@@ -13,7 +13,7 @@ class rc(object):
     DELETED = create_reply('', status=204) # 204 says "Don't send a body!"
     BAD_REQUEST = create_reply('Bad Request', status=400)
     FORBIDDEN = create_reply('Forbidden', status=401)
-    DUPLICATE_ENTRY = create_reply('Conflict', status=409)
+    DUPLICATE_ENTRY = create_reply('Conflict/Duplicate', status=409)
     NOT_HERE = create_reply('Gone', status=410)
     NOT_IMPLEMENTED = create_reply('Not Implemented', status=501)
     
