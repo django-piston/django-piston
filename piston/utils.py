@@ -1,5 +1,10 @@
+from functools import wraps
 from django.http import HttpResponseNotAllowed, HttpResponseForbidden, HttpResponse
 from django.core.urlresolvers import reverse
+from django.core.cache import cache
+from decorator import decorator
+
+from datetime import datetime, timedelta
 
 def create_reply(message, status=200):
     return HttpResponse(message, status=status)
@@ -16,6 +21,7 @@ class rc(object):
     DUPLICATE_ENTRY = create_reply('Conflict/Duplicate', status=409)
     NOT_HERE = create_reply('Gone', status=410)
     NOT_IMPLEMENTED = create_reply('Not Implemented', status=501)
+    THROTTLED = create_reply('Throttled', status=503)
     
 class FormValidationError(Exception):
     def __init__(self, form):
@@ -27,6 +33,7 @@ class HttpStatusCode(Exception):
         self.code = code
 
 def validate(v_form, operation='POST'):
+    @decorator
     def dec(func):
         def wrap(self, request, *a, **kwa):
             form = v_form(getattr(request, operation))
@@ -39,6 +46,66 @@ def validate(v_form, operation='POST'):
                                 
         return wrap
     return dec
+
+def throttle(max_requests, timeout=60*60):
+    """
+    Simple throttling decorator, caches
+    the amount of requests made in cache.
+    
+    If used on a view where users are required to
+    log in, the username is used, otherwise the
+    IP address of the originating request is used.
+    
+    Parameters::
+     - `max_requests`: The maximum number of requests
+     - `timeout`: The timeout for the cache entry (default: 1 hour)
+    """
+    @decorator
+    def inner(f):
+        def wrap(self, request, *args, **kwargs):
+            if request.user.is_authenticated():
+                ident = request.user.username
+            else:
+                ident = request.META.get('REMOTE_ADDR', None)
+
+            if hasattr(request, 'throttle_extra'):
+                """
+                Since we want to be able to throttle on a per-
+                application basis, it's important that we realize
+                that `throttle_extra` might be set on the request
+                object. If so, append the identifier name with it.
+                """
+                ident += ':%s' % str(request.throttle_extra)
+            
+            if ident:
+                """
+                Preferrably we'd use incr/decr here, since they're
+                atomic in memcached, but it's in django-trunk so we
+                can't use it yet. If someone sees this after it's in
+                stable, you can change it here.
+                """
+                now = datetime.now()
+                ts_key = 'throttle:ts:%s' % ident
+                timestamp = cache.get(ts_key)
+                offset = now + timedelta(seconds=timeout)
+
+                if timestamp and timestamp < offset:
+                    t = rc.THROTTLED
+                    wait = timeout - (offset-timestamp).seconds
+                    t.content = 'Throttled, wait %d seconds.' % wait
+                    
+                    return t
+                    
+                count = cache.get(ident, 1)
+                cache.set(ident, count+1)
+                
+                if count >= max_requests:
+                    cache.set(ts_key, offset, timeout)
+                    cache.set(ident, 1)
+
+            return f(self, request, *args, **kwargs)
+        return wrap
+    return inner
 
 def coerce_put_post(request):
     if request.method == "PUT":

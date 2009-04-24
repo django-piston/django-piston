@@ -1,8 +1,9 @@
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseRedirect
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from django.template import loader
 from django.conf import settings
+from django.core.urlresolvers import get_callable
 
 import oauth
 from store import DataStore
@@ -109,7 +110,7 @@ def oauth_request_token(request):
     return response
 
 def oauth_auth_view(request, token, callback, params):
-    return HttpResponse("Just a fake view for auth.")
+    return HttpResponse("Just a fake view for auth. %s, %s, %s" % (token, callback, params))
 
 @login_required
 def oauth_user_auth(request):
@@ -120,7 +121,7 @@ def oauth_user_auth(request):
         
     try:
         token = oauth_server.fetch_request_token(oauth_request)
-    except oath.OAuthError, err:
+    except oauth.OAuthError, err:
         return send_oauth_error(err)
         
     try:
@@ -131,21 +132,26 @@ def oauth_user_auth(request):
     if request.method == "GET":
         request.session['oauth'] = token.key
         params = oauth_request.get_normalized_parameters()
-        return oauth_auth_view(request, token, callback, params)
+        oauth_view = getattr(settings, 'OAUTH_AUTH_VIEW', 'oauth_auth_view')
+        return get_callable(oauth_view)(request, token, callback, params)
     elif request.method == "POST":
         if request.session.get('oauth', '') == token.key:
             request.session['oauth'] = ''
             
             try:
-                if int(request.POST.get('authorize_access')):
+                if int(request.POST.get('authorize_access', '0')):
                     token = oauth_server.authorize_token(token, request.user)
-                    args = token.to_string(only_key=True)
+                    args = '?'+token.to_string(only_key=True)
                 else:
-                    args = 'error=%s' % 'Access not granted by user.'
+                    args = '?error=%s' % 'Access not granted by user.'
                 
-                response = HttpResponse('Fake callback.')
+                if not callback:
+                    callback = getattr(settings, 'OAUTH_CALLBACK_VIEW')
+                    return get_callable(callback)(request, token)
                     
-            except OAuthError, err:
+                response = HttpResponseRedirect(callback+args)
+                    
+            except oauth.OAuthError, err:
                 response = send_oauth_error(err)
         else:
             response = HttpResponse('Action not allowed.')
@@ -202,6 +208,7 @@ class OAuthAuthentication(object):
 
             if consumer and token:
                 request.user = token.user
+                request.throttle_extra = token.consumer.id
                 return True
             
         return False
