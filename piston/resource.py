@@ -1,8 +1,15 @@
+import sys, inspect
+
 from django.http import HttpResponse, Http404, HttpResponseNotAllowed, HttpResponseForbidden
+from django.views.debug import ExceptionReporter
 from django.views.decorators.vary import vary_on_headers
+from django.conf import settings
+from django.core.mail import send_mail, EmailMessage
+
 from emitters import Emitter
 from handler import typemapper
-from utils import coerce_put_post, FormValidationError, HttpStatusCode
+from doc import HandlerMethod
+from utils import coerce_put_post, FormValidationError, HttpStatusCode, rc, format_error
 
 class NoAuthentication(object):
     """
@@ -34,6 +41,10 @@ class Resource(object):
             self.authentication = NoAuthentication()
         else:
             self.authentication = authentication
+            
+        # Erroring
+        self.email_errors = getattr(settings, 'PISTON_EMAIL_ERRORS', True)
+        self.display_errors = getattr(settings, 'PISTON_DISPLAY_ERRORS', True)
     
     @vary_on_headers('Authorization')
     def __call__(self, request, *args, **kwargs):
@@ -73,9 +84,50 @@ class Resource(object):
             result = meth(request, *args, **kwargs)
         except FormValidationError, form:
             return HttpResponse("Bad Request: %s" % form.errors, status=400)
-        except Exception, e:
+        except TypeError, e:
+            result = rc.BAD_REQUEST
+            hm = HandlerMethod(meth)
+            sig = hm.get_signature()
+
+            msg = 'Method signature does not match.\n\n'
+            
+            if sig:
+                msg += 'Signature should be: %s' % sig
+            else:
+                msg += 'Resource does not expect any parameters.'
+
+            if self.display_errors:                
+                msg += '\n\nException was: %s' % str(e)
+                
+            result.content = format_error(msg)
+        except HttpStatusCode, e:
             result = e
-        
+        except Exception, e:
+            """
+            On errors (like code errors), we'd like to be able to
+            give crash reports to both admins and also the calling
+            user. There's two setting parameters for this:
+            
+            Parameters::
+             - `PISTON_EMAIL_ERRORS`: Will send a Django formatted
+               error email to people in `settings.ADMINS`.
+             - `PISTON_DISPLAY_ERRORS`: Will return a simple traceback
+               to the caller, so he can tell you what error they got.
+               
+            If `PISTON_DISPLAY_ERRORS` is not enabled, the caller will
+            receive a basic "500 Internal Server Error" message.
+            """
+            if self.email_errors:
+                exc_type, exc_value, tb = sys.exc_info()
+                rep = ExceptionReporter(request, exc_type, exc_value, tb.tb_next)
+
+                self.email_exception(rep)
+
+            if self.display_errors:
+                result = format_error('\n'.join(rep.format_exception()))
+            else:
+                raise
+
         emitter, ct = Emitter.get(request.GET.get('format', 'json'))
         srl = emitter(result, typemapper, handler, handler.fields)
 
@@ -90,7 +142,7 @@ class Resource(object):
         Removes `oauth_` keys from various dicts on the
         request object, and returns the sanitized version.
         """
-        for method_type in [ 'GET', 'PUT', 'POST', 'DELETE' ]:
+        for method_type in ('GET', 'PUT', 'POST', 'DELETE'):
             block = getattr(request, method_type, { })
 
             if True in [ k.startswith("oauth_") for k in block.keys() ]:
@@ -104,3 +156,15 @@ class Resource(object):
 
         return request
         
+    # -- 
+    
+    def email_exception(self, reporter):
+        subject = "Piston crash report"
+        html = reporter.get_traceback_html()
+
+        message = EmailMessage(settings.EMAIL_SUBJECT_PREFIX+subject,
+                                html, settings.SERVER_EMAIL,
+                                [ admin[1] for admin in settings.ADMINS ])
+        
+        message.content_subtype = 'html'
+        message.send(fail_silently=True)

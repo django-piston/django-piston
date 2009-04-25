@@ -20,7 +20,7 @@ class HandlerMethod(object):
         args, _, _, defaults = inspect.getargspec(self.method)
 
         for idx, arg in enumerate(args):
-            if arg in ('self', 'request'):
+            if arg in ('self', 'request', 'form'):
                 continue
 
             didx = len(args)-idx

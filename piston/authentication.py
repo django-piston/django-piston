@@ -68,7 +68,9 @@ class HttpBasicAuthentication(object):
         return resp
 
 def initialize_server_request(request):
-    """Shortcut for initialization."""
+    """
+    Shortcut for initialization.
+    """
     oauth_request = oauth.OAuthRequest.from_request(
         request.method, request.build_absolute_uri(), 
         headers=request.META, parameters=dict(request.REQUEST.items()),
@@ -84,15 +86,18 @@ def initialize_server_request(request):
     return oauth_server, oauth_request
 
 def send_oauth_error(err=None):
-    """Shortcut for sending an error."""
-    # send a 401 error
+    """
+    Shortcut for sending an error.
+    """
     response = HttpResponse(err.message.encode('utf-8'))
     response.status_code = 401
-    # return the authenticate header
+
     realm = 'Bitbucket.org OAuth'
     header = oauth.build_authenticate_header(realm=realm)
+
     for k, v in header.iteritems():
         response[k] = v
+
     return response
 
 def oauth_request_token(request):
@@ -101,12 +106,12 @@ def oauth_request_token(request):
     if oauth_server is None:
         return INVALID_PARAMS_RESPONSE
     try:
-        # create a request token
         token = oauth_server.fetch_request_token(oauth_request)
-        # return the token
+
         response = HttpResponse(token.to_string())
     except oauth.OAuthError, err:
         response = send_oauth_error(err)
+
     return response
 
 def oauth_auth_view(request, token, callback, params):
@@ -132,7 +137,9 @@ def oauth_user_auth(request):
     if request.method == "GET":
         request.session['oauth'] = token.key
         params = oauth_request.get_normalized_parameters()
+
         oauth_view = getattr(settings, 'OAUTH_AUTH_VIEW', 'oauth_auth_view')
+
         return get_callable(oauth_view)(request, token, callback, params)
     elif request.method == "POST":
         if request.session.get('oauth', '') == token.key:
@@ -170,17 +177,6 @@ def oauth_access_token(request):
     except oauth.OAuthError, err:
         return send_oauth_error(err)
 
-def oauth_protected_area(request):
-    oauth_server, oauth_request = initialize_server_request(request)
-
-    try:
-        consumer, token, parameters = oauth_server.verify_request(oauth_request)
-        return HttpResponse("protected resource, consumer=%s, token=%s, parameters=%s, you are=%s" % (consumer, token, parameters, token.user))
-    except oauth.OAuthError, err:
-        return send_oauth_error(err)
-
-    return HttpResponse("OK = %s" % ok)
-                
 INVALID_PARAMS_RESPONSE = send_oauth_error(oauth.OAuthError('Invalid request parameters.'))
                 
 class OAuthAuthentication(object):
@@ -250,7 +246,7 @@ class OAuthAuthentication(object):
             'consumer_key', 'token', 'signature',
             'signature_method', 'timestamp', 'nonce' ] ]
         
-        is_in = lambda l: False not in [ (p in l) for p in must_have ]
+        is_in = lambda l: all([ (p in l) for p in must_have ])
 
         auth_params = request.META.get("HTTP_AUTHORIZATION", "")
         req_params = request.REQUEST
