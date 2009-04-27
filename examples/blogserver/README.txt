@@ -39,6 +39,30 @@ $ curl "http://127.0.0.1:8000/api/posts/?format=yaml"
 - {content: This is yet another sample post., created_on: !!timestamp '2009-04-27
     04:55:33', title: Another sample post}
 
+Creating blog posts is also easy:
+
+$ curl -u testuser:foobar "http://127.0.0.1:8000/api/posts/?format=yaml" -F "title=Testing again" -F "content=Foobar"
+author: {absolute_uri: /users/testuser/, username: testuser}
+content: Foobar
+content_length: 6
+created_on: 2009-04-27 05:53:38.138215
+title: Testing again
+
+(The data returned is the blog post it created.)
+
+Anonymously that's not allowed:
+
+$ curl -v "http://127.0.0.1:8000/api/posts/?format=yaml" -F "title=Testing again" -F "content=Foobar"
+* About to connect() to 127.0.0.1 port 8000 (#0)
+*   Trying 127.0.0.1... connected
+* Connected to 127.0.0.1 (127.0.0.1) port 8000 (#0)
+> POST /api/posts/?format=yaml HTTP/1.1
+[snip]
+> 
+< HTTP/1.0 405 METHOD NOT ALLOWED
+
+This is because by default, AnonymousBaseHandler has 'allow_methods' only set to 'GET'.
+
 You can check out how this is done in the 'api' directory.
 
 Also, there's plenty of documentation on http://bitbucket.org/jespern/django-piston/
