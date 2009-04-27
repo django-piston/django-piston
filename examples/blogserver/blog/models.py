@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.contrib import admin
 
 class Blogpost(models.Model):
     title = models.CharField(max_length=255)
@@ -10,4 +11,4 @@ class Blogpost(models.Model):
     def __unicode__(self):
         return self.title
 
-    
+admin.site.register(Blogpost)
