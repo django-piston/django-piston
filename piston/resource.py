@@ -55,10 +55,12 @@ class Resource(object):
         if not self.authentication.is_authenticated(request):
             if self.handler.anonymous and callable(self.handler.anonymous):
                 handler = self.handler.anonymous()
+                anonymous = True
             else:
                 return self.authentication.challenge()
         else:
             handler = self.handler
+            anonymous = False
         
         rm = request.method.upper()
         
@@ -83,6 +85,7 @@ class Resource(object):
         try:
             result = meth(request, *args, **kwargs)
         except FormValidationError, form:
+            # TODO: Use rc.BAD_REQUEST here
             return HttpResponse("Bad Request: %s" % form.errors, status=400)
         except TypeError, e:
             result = rc.BAD_REQUEST
@@ -129,8 +132,8 @@ class Resource(object):
                 raise
 
         emitter, ct = Emitter.get(request.GET.get('format', 'json'))
-        srl = emitter(result, typemapper, handler, handler.fields)
-
+        srl = emitter(result, typemapper, handler, handler.fields, anonymous)
+        
         try:
             return HttpResponse(srl.render(request), mimetype=ct)
         except HttpStatusCode, e:

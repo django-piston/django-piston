@@ -9,16 +9,10 @@ class HandlerMetaClass(type):
         new_cls = type.__new__(cls, name, bases, attrs)
         
         if hasattr(new_cls, 'model'):
-            typemapper[new_cls.model] = new_cls
+            typemapper[new_cls] = (new_cls.model, new_cls.is_anonymous)
         
         return new_cls
 
-class AnonymousBaseHandler(object):
-    """
-    Anonymous handler.
-    """
-    allowed_methods = ('GET',)
-    
 class BaseHandler(object):
     """
     Basehandler that gives you CRUD for free.
@@ -32,7 +26,7 @@ class BaseHandler(object):
     __metaclass__ = HandlerMetaClass
     
     allowed_methods = ('GET', 'POST', 'PUT', 'DELETE')
-    anonymous = False
+    anonymous = is_anonymous = False
     exclude = ( 'id' )
     fields =  ( )
     
@@ -93,3 +87,9 @@ class BaseHandler(object):
         
         return "I can't do this yet."
 
+class AnonymousBaseHandler(BaseHandler):
+    """
+    Anonymous handler.
+    """
+    is_anonymous = True
+    allowed_methods = ('GET',)

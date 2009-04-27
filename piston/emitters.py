@@ -23,11 +23,12 @@ class Emitter(object):
     usually the only method you want to use in your
     emitter. See below for examples.
     """
-    def __init__(self, payload, typemapper, handler, fields=()):
+    def __init__(self, payload, typemapper, handler, fields=(), anonymous=True):
         self.typemapper = typemapper
         self.data = payload
         self.handler = handler
         self.fields = fields
+        self.anonymous = anonymous
         
         if isinstance(self.data, Exception):
             raise
@@ -89,13 +90,18 @@ class Emitter(object):
             """
             ret = { }
             
-            if type(data) in self.typemapper.keys() or fields:
+            if self.in_typemapper(type(data), self.anonymous) or fields:
 
                 v = lambda f: getattr(data, f.attname)
 
                 if not fields:
-                    get_fields = set(self.typemapper.get(type(data)).fields)
-                    exclude_fields = set(self.typemapper.get(type(data)).exclude)
+                    """
+                    Fields was not specified, try to find teh correct
+                    version in the typemapper we were sent.
+                    """
+                    mapped = self.in_typemapper(type(data), self.anonymous)
+                    get_fields = set(mapped.fields)
+                    exclude_fields = set(mapped.exclude)
                 
                     if not get_fields:
                         get_fields = set([ f.attname.replace("_id", "", 1)
@@ -152,7 +158,7 @@ class Emitter(object):
                             handler_f = getattr(self.handler, maybe_field, None)
 
                             if handler_f:
-                                ret[maybe_field] = handler_f(self.data)                            
+                                ret[maybe_field] = handler_f(data)
 
             else:
                 for f in data._meta.fields:
@@ -195,8 +201,14 @@ class Emitter(object):
             """
             return dict([ (k, _any(v)) for k, v in data.iteritems() ])
             
+        # Kickstart the seralizin'.
         return _any(self.data, self.fields)
     
+    def in_typemapper(self, model, anonymous):
+        for klass, (km, is_anon) in self.typemapper.iteritems():
+            if model is km and is_anon is anonymous:
+                return klass
+        
     def render(self):
         """
         This super emitter does not implement `render`,
