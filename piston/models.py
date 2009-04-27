@@ -72,7 +72,7 @@ class Consumer(models.Model):
         super(Consumer, self).save(**kwargs)
         
         if self.id and self.user:
-            subject = "Bitbucket API Consumer"
+            subject = "API Consumer"
             rcpt = [ self.user.email, ]
 
             if self.status == "accepted":
@@ -91,7 +91,7 @@ class Consumer(models.Model):
             body = loader.render_to_string(template, 
                     { 'consumer': self, 'user': self.user })
                     
-            send_mail(subject, body, 'api-noreply@bitbucket.org', 
+            send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, 
                         rcpt, fail_silently=True)
             
             if self.status == 'pending':

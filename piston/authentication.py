@@ -39,7 +39,7 @@ class HttpBasicAuthentication(object):
         This will usually be a `HttpResponse` object with
         some kind of challenge headers and 401 code on it.
     """
-    def __init__(self, auth_func=django_auth, realm='Bitbucket.org API'):
+    def __init__(self, auth_func=django_auth, realm='API'):
         self.auth_func = auth_func
         self.realm = realm
 
@@ -92,7 +92,7 @@ def send_oauth_error(err=None):
     response = HttpResponse(err.message.encode('utf-8'))
     response.status_code = 401
 
-    realm = 'Bitbucket.org OAuth'
+    realm = 'OAuth'
     header = oauth.build_authenticate_header(realm=realm)
 
     for k, v in header.iteritems():
@@ -183,7 +183,7 @@ class OAuthAuthentication(object):
     """
     OAuth authentication. Based on work by Leah Culver.
     """
-    def __init__(self, realm='Bitbucket.org HTTP'):
+    def __init__(self, realm='API'):
         self.realm = realm
         self.builder = oauth.build_authenticate_header
     
@@ -222,7 +222,7 @@ class OAuthAuthentication(object):
         """
         response = HttpResponse()
         response.status_code = 401
-        realm = 'Bitbucket.org OAuth'
+        realm = 'API'
 
         for k, v in self.builder(realm=realm).iteritems():
             response[k] = v
