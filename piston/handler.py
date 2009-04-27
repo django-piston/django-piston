@@ -1,3 +1,5 @@
+from piston.utils import rc
+
 typemapper = { }
 
 class HandlerMetaClass(type):
@@ -54,39 +56,43 @@ class BaseHandler(object):
     
     def read(self, request, *args, **kwargs):
         if not self.has_model():
-            raise NotImplementedError
+            return rc.NOT_IMPLEMENTED
         
         return self.model.objects.filter(*args, **kwargs)
     
     def create(self, request, *args, **kwargs):
         if not self.has_model():
-            raise NotImplementedError
+            return rc.NOT_IMPLEMENTED
         
         attrs = self.flatten_dict(request.POST)
         
         try:
             inst = self.model.objects.get(**attrs)
-            raise ValueError("Already exists.")
+            return rc.DUPLICATE_ENTRY
         except self.model.DoesNotExist:
             inst = self.model(attrs)
             inst.save()
             return inst
     
     def update(self, request, *args, **kwargs):
-        if not self.has_model():
-            raise NotImplementedError
-        
-        inst = self.model.objects.get(*args, **kwargs)
-        print "must update instance", inst, "with", request.PUT
-        
-        return "I can't do this yet."
+        # TODO: This doesn't work automatically yet.
+        return rc.NOT_IMPLEMENTED
     
     def delete(self, request, *args, **kwargs):
         if not self.has_model():
             raise NotImplementedError
-        
-        return "I can't do this yet."
 
+        try:
+            inst = self.model.objects.get(*args, **kwargs)
+
+            inst.delete()
+
+            return rc.DELETED
+        except self.model.MultipleObjectsReturned:
+            return rc.DUPLICATE_ENTRY
+        except self.model.DoesNotExist:
+            return rc.NOT_HERE
+        
 class AnonymousBaseHandler(BaseHandler):
     """
     Anonymous handler.
