@@ -29,7 +29,7 @@ class BaseHandler(object):
     
     allowed_methods = ('GET', 'POST', 'PUT', 'DELETE')
     anonymous = is_anonymous = False
-    exclude = ( 'id' )
+    exclude = ( 'id', )
     fields =  ( )
     
     def flatten_dict(self, dct):
