@@ -5,6 +5,7 @@ setup(
     name = "django-piston",
     version = "0.0.1",
     url = 'http://bitbucket.org/jespern/django-piston/wiki/Home',
+	download_url = 'http://bitbucket.org/jespern/django-piston/get/0.1.tar.gz',
     license = 'BSD',
     description = "Piston is a Django mini-framework creating APIs.",
     author = 'Jesper Noehr',
