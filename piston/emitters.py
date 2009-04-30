@@ -15,6 +15,11 @@ try:
 except ImportError:
     import StringIO
 
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
+
 class Emitter(object):
     """
     Super emitter. All other emitters should subclass
@@ -23,6 +28,8 @@ class Emitter(object):
     usually the only method you want to use in your
     emitter. See below for examples.
     """
+    EMITTERS = { }
+
     def __init__(self, payload, typemapper, handler, fields=(), anonymous=True):
         self.typemapper = typemapper
         self.data = payload
@@ -221,12 +228,30 @@ class Emitter(object):
         """
         Gets an emitter, returns the class and a content-type.
         """
-        if format == 'xml':
-            return XMLEmitter, 'text/xml; charset=utf-8'
-        elif format == 'json':
-            return JSONEmitter, 'application/json; charset=utf-8'
-        elif format == 'yaml':
-            return YAMLEmitter, 'application/x-yaml; charset=utf-8'
+        if cls.EMITTERS.has_key(format):
+            return cls.EMITTERS.get(format)
+
+        raise ValueError("No emitters found for type %s" % format)
+    
+    @classmethod
+    def register(cls, name, klass, content_type='text/plain'):
+        """
+        Register an emitter.
+        
+        Parameters::
+         - `name`: The name of the emitter ('json', 'xml', 'yaml', ...)
+         - `klass`: The emitter class.
+         - `content_type`: The content type to serve response as.
+        """
+        cls.EMITTERS[name] = (klass, content_type)
+        
+    @classmethod
+    def unregister(cls, name):
+        """
+        Remove an emitter from the registry. Useful if you don't
+        want to provide output in one of the built-in emitters.
+        """
+        return cls.EMITTERS.pop(name, None)
     
 class XMLEmitter(Emitter):
     def _to_xml(self, xml, data):
@@ -255,6 +280,8 @@ class XMLEmitter(Emitter):
         
         return stream.getvalue()
 
+Emitter.register('xml', XMLEmitter, 'text/xml; charset=utf-8')
+
 class JSONEmitter(Emitter):
     """
     JSON emitter, understands timestamps.
@@ -269,6 +296,8 @@ class JSONEmitter(Emitter):
 
         return seria
     
+Emitter.register('json', JSONEmitter, 'application/json; charset=utf-8')
+    
 class YAMLEmitter(Emitter):
     """
     YAML emitter, uses `safe_dump` to omit the
@@ -276,3 +305,14 @@ class YAMLEmitter(Emitter):
     """
     def render(self, request):
         return yaml.safe_dump(self.construct())
+
+Emitter.register('yaml', YAMLEmitter, 'application/x-yaml; charset=utf-8')
+
+class PickleEmitter(Emitter):
+    """
+    Emitter that returns Python pickled.
+    """
+    def render(self, request):
+        return pickle.dumps(self.construct())
+        
+Emitter.register('pickle', PickleEmitter, 'application/octet-stream')

@@ -76,6 +76,9 @@ class Resource(object):
         
         if not meth:
             raise Http404
+
+        # Support emitter both through (?P<emitter_format>) and ?format=emitter.
+        em_format = kwargs.pop('emitter_format', request.GET.get('format', 'json'))
         
         # Clean up the request object a bit, since we might
         # very well have `oauth_`-headers in there, and we
@@ -131,7 +134,7 @@ class Resource(object):
             else:
                 raise
 
-        emitter, ct = Emitter.get(request.GET.get('format', 'json'))
+        emitter, ct = Emitter.get(em_format)
         srl = emitter(result, typemapper, handler, handler.fields, anonymous)
         
         try:
