@@ -10,4 +10,6 @@ blogposts = Resource(handler=BlogpostHandler, authentication=auth)
 
 urlpatterns = patterns('',
     url(r'^posts/$', blogposts),
+    url(r'^posts/(?P<emitter_format>.+)/$', blogposts),
+    url(r'^posts\.(?P<emitter_format>.+)', blogposts),
 )
