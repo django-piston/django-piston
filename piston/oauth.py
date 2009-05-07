@@ -12,12 +12,20 @@ SIGNATURE_METHOD = 'PLAINTEXT'
 
 # Generic exception class
 class OAuthError(RuntimeError):
+    def get_message(self): 
+        return self._message
+
+    def set_message(self, message): 
+        self._message = message
+
+    message = property(get_message, set_message)
+
     def __init__(self, message='OAuth error occured.'):
         self.message = message
 
 # optional WWW-Authenticate header (401 error)
 def build_authenticate_header(realm=''):
-    return {'WWW-Authenticate': 'OAuth realm="%s"' % realm}
+    return { 'WWW-Authenticate': 'OAuth realm="%s"' % realm }
 
 # url escape
 def escape(s):
