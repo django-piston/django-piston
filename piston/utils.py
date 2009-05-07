@@ -1,4 +1,3 @@
-from functools import wraps
 from django.http import HttpResponseNotAllowed, HttpResponseForbidden, HttpResponse
 from django.core.urlresolvers import reverse
 from django.core.cache import cache
