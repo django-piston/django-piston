@@ -1,4 +1,11 @@
-import types, decimal, yaml, types, re, inspect
+import types, decimal, types, re, inspect
+
+try:
+    # yaml isn't standard with python.  It shouldn't be required if it
+    # isn't used.
+    import yaml
+except ImportError:
+    yaml = None
 
 from django.db.models.query import QuerySet
 from django.db.models import Model, permalink
@@ -306,7 +313,8 @@ class YAMLEmitter(Emitter):
     def render(self, request):
         return yaml.safe_dump(self.construct())
 
-Emitter.register('yaml', YAMLEmitter, 'application/x-yaml; charset=utf-8')
+if yaml:  # Only register yaml if it was import successfully.
+    Emitter.register('yaml', YAMLEmitter, 'application/x-yaml; charset=utf-8')
 
 class PickleEmitter(Emitter):
     """
