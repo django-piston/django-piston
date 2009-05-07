@@ -79,8 +79,7 @@ class HandlerDocumentation(object):
     def is_anonymous(self):
         return False
 
-    @property
-    def model(self):
+    def get_model(self):
         return getattr(self, 'model', None)
     
     @property
