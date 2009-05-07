@@ -263,7 +263,7 @@ class XMLEmitter(Emitter):
                 xml.startElement(key, {})
                 self._to_xml(xml, value)
                 xml.endElement(key)
-        elif data:
+        else:
             xml.characters(smart_unicode(data))
 
     def render(self, request):
