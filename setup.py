@@ -1,5 +1,14 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+try:
+    from setuptools import setup, find_packages
+except ImportError:
+    import ez_setup
+    ez_setup.use_setuptools()
+    from setuptools import setup, find_packages
+    
 import os
-from distutils.core import setup
 
 setup(
     name = "django-piston",
@@ -10,7 +19,8 @@ setup(
     description = "Piston is a Django mini-framework creating APIs.",
     author = 'Jesper Noehr',
     author_email = 'jesper@noehr.org',
-    packages = ['piston'],
+    packages = find_packages(),
+    include_package_data = True,
     classifiers = [
         'Development Status :: 3 - Alpha',
         'Framework :: Django',
