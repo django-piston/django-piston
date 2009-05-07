@@ -15,7 +15,7 @@ from django.utils.encoding import smart_unicode
 from django.core.serializers.json import DateTimeAwareJSONEncoder
 from django.http import HttpResponse
 
-from utils import HttpStatusCode
+from utils import HttpStatusCode, Mimer
 
 try:
     import cStringIO as StringIO
@@ -288,6 +288,7 @@ class XMLEmitter(Emitter):
         return stream.getvalue()
 
 Emitter.register('xml', XMLEmitter, 'text/xml; charset=utf-8')
+Mimer.register(lambda *a: None, ('text/xml',))
 
 class JSONEmitter(Emitter):
     """
@@ -304,6 +305,7 @@ class JSONEmitter(Emitter):
         return seria
     
 Emitter.register('json', JSONEmitter, 'application/json; charset=utf-8')
+Mimer.register(simplejson.loads, ('application/json',))
     
 class YAMLEmitter(Emitter):
     """
@@ -315,6 +317,7 @@ class YAMLEmitter(Emitter):
 
 if yaml:  # Only register yaml if it was import successfully.
     Emitter.register('yaml', YAMLEmitter, 'application/x-yaml; charset=utf-8')
+    Mimer.register(yaml.load, ('application/x-yaml',))
 
 class PickleEmitter(Emitter):
     """
@@ -323,4 +326,5 @@ class PickleEmitter(Emitter):
     def render(self, request):
         return pickle.dumps(self.construct())
         
-Emitter.register('pickle', PickleEmitter, 'application/octet-stream')
+Emitter.register('pickle', PickleEmitter, 'application/python-pickle')
+Mimer.register(pickle.loads, ('application/python-pickle',))

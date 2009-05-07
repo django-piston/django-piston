@@ -122,3 +122,64 @@ def coerce_put_post(request):
         request.PUT = request.POST
         del request._post
 
+class Mimer(object):
+    TYPES = dict()
+    
+    def __init__(self, request):
+        self.request = request
+        
+    def is_multipart(self):
+        return 'Content-Disposition: form-data;' in self.request.raw_post_data
+
+    def loader_for_type(self, ctype):
+        """
+        Gets a function ref to deserialize content
+        for a certain mimetype.
+        """
+        for loadee, mimes in Mimer.TYPES.iteritems():
+            if ctype in mimes:
+                return loadee
+
+    def translate(self):
+        """
+        Will look at the `Content-type` sent by the client, and maybe
+        deserialize the contents into the format they sent. This will
+        work for JSON, YAML, XML and Pickle. Since the data is not just
+        key-value (and maybe just a list), the data will be placed on
+        `request.data` instead, and the handler will have to read from
+        there.
+        
+        It will also set `request.mimetype` so the handler has an easy
+        way to tell what's going on. `request.mimetype` will always be
+        None for multipart form data (what your browser sends.)
+        """
+        ctype = self.request.META.get('CONTENT_TYPE')
+    
+        if not self.is_multipart() and ctype:
+            loadee = self.loader_for_type(ctype)
+            
+            try:
+                self.request.content_type = ctype
+                self.request.data = loadee(self.request.raw_post_data)
+                
+                # Reset both POST and PUT from request, as its
+                # misleading having their presence around.
+                self.request.POST = self.request.PUT = dict()
+            except TypeError:
+                return rc.BAD_REQUEST # TODO: Handle this in super
+            except Exception, e:
+                raise
+                
+        return self.request
+                
+    @classmethod
+    def register(cls, loadee, types):
+        cls.TYPES[loadee] = types
+        
+    @classmethod
+    def unregister(cls, loadee):
+        return cls.TYPES.pop(loadee)
+
+def translate_mime(request):
+    request = Mimer(request).translate()    
+    
