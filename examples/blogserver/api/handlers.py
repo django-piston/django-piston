@@ -18,10 +18,6 @@ class BlogpostHandler(BaseHandler):
         
     @require_extended
     def create(self, request):
-        if request.content_type:
-            print request.data
-            return { 'foo': 42 }
-
         attrs = self.flatten_dict(request.POST)
 
         if self.exists(**attrs):

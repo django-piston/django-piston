@@ -11,3 +11,6 @@ def posts(request):
     return render_to_response("posts.html", {
         'posts': posts },
         RequestContext(request))
+    
+def test_js(request):
+    return render_to_response('test_js.html', {}, RequestContext(request))
