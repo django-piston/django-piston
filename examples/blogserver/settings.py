@@ -89,3 +89,5 @@ INSTALLED_APPS = (
 FIXTURE_DIRS = (
     os.path.join(BASE_DIR, 'fixtures'),
 )
+
+APPEND_SLASH = False

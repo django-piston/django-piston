@@ -9,7 +9,8 @@ from django.core.mail import send_mail, EmailMessage
 from emitters import Emitter
 from handler import typemapper
 from doc import HandlerMethod
-from utils import coerce_put_post, FormValidationError, HttpStatusCode, rc, format_error
+from utils import coerce_put_post, FormValidationError, HttpStatusCode
+from utils import rc, format_error, translate_mime
 
 class NoAuthentication(object):
     """
@@ -68,6 +69,9 @@ class Resource(object):
         # PUT request, so we trick it a little here.
         if rm == "PUT":
             coerce_put_post(request)
+        
+        # Translate nested datastructs into `request.data` here.
+        translate_mime(request)
         
         if not rm in handler.allowed_methods:
             return HttpResponseNotAllowed(handler.allowed_methods)
