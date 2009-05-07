@@ -70,7 +70,7 @@ class BaseHandler(object):
             inst = self.model.objects.get(**attrs)
             return rc.DUPLICATE_ENTRY
         except self.model.DoesNotExist:
-            inst = self.model(attrs)
+            inst = self.model(**attrs)
             inst.save()
             return inst
     
