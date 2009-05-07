@@ -1,0 +1,6 @@
+syntax: glob
+*.egg
+*.pyc
+build
+dist
+django_piston.egg-info
