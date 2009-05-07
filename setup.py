@@ -3,7 +3,7 @@ from distutils.core import setup
 
 setup(
     name = "django-piston",
-    version = "0.0.1",
+    version = "0.2",
     url = 'http://bitbucket.org/jespern/django-piston/wiki/Home',
 	download_url = 'http://bitbucket.org/jespern/django-piston/downloads/',
     license = 'BSD',
