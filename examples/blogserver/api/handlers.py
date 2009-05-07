@@ -1,5 +1,5 @@
 from piston.handler import BaseHandler, AnonymousBaseHandler
-from piston.utils import rc
+from piston.utils import rc, require_mime, require_extended
 
 from blogserver.blog.models import Blogpost
 
@@ -16,6 +16,7 @@ class BlogpostHandler(BaseHandler):
     def content_length(self, blogpost):
         return len(blogpost.content)
         
+    @require_extended
     def create(self, request):
         if request.content_type:
             print request.data

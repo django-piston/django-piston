@@ -140,6 +140,9 @@ class Mimer(object):
             if ctype in mimes:
                 return loadee
 
+    def content_type(self):
+        return self.request.META.get('CONTENT_TYPE')
+
     def translate(self):
         """
         Will look at the `Content-type` sent by the client, and maybe
@@ -152,9 +155,9 @@ class Mimer(object):
         It will also set `request.mimetype` so the handler has an easy
         way to tell what's going on. `request.mimetype` will always be
         None for multipart form data (what your browser sends.)
-        """
-        ctype = self.request.META.get('CONTENT_TYPE')
-    
+        """    
+        ctype = self.content_type()
+        
         if not self.is_multipart() and ctype:
             loadee = self.loader_for_type(ctype)
             
@@ -181,5 +184,32 @@ class Mimer(object):
         return cls.TYPES.pop(loadee)
 
 def translate_mime(request):
-    request = Mimer(request).translate()    
+    request = Mimer(request).translate()
+    
+def require_mime(*mimes):
+    """
+    Decorator requiring a certain mimetype. There's a nifty
+    helper called `require_extended` below which requires everything
+    we support except for post-data via form.
+    """
+    @decorator
+    def wrap(f, self, request, *args, **kwargs):
+        m = Mimer(request)
+        realmimes = set()
+
+        rewrite = { 'json':   'application/json',
+                    'yaml':   'application/x-yaml',
+                    'xml':    'text/xml',
+                    'pickle': 'application/python-pickle' }
+
+        for idx, mime in enumerate(mimes):
+            realmimes.add(rewrite.get(mime, mime))
+
+        if not m.content_type() in realmimes:
+            return rc.BAD_REQUEST
+
+        return f(self, request, *args, **kwargs)
+    return wrap
+
+require_extended = require_mime('json', 'yaml', 'xml', 'pickle')
     
