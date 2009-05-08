@@ -264,7 +264,9 @@ class XMLEmitter(Emitter):
     def _to_xml(self, xml, data):
         if isinstance(data, (list, tuple)):
             for item in data:
+                xml.startElement("resource", {})
                 self._to_xml(xml, item)
+                xml.endElement("resource")
         elif isinstance(data, dict):
             for key, value in data.iteritems():
                 xml.startElement(key, {})
