@@ -9,3 +9,4 @@ Benoit Chesneau provided some mimetype helpers
 Adam Lowry fixed a bug with the callmap construct
 Benjamin Pollack provided an ez_setup fix and more
 Seph Soliman for fixing a bug with AnonymousBaseHandler
+David Larlet for suggesting several improvements
