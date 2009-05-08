@@ -2,7 +2,7 @@ from django.test import TestCase
 from django.contrib.auth.models import User
 import base64
 
-from .models import TestModel
+from test_project.apps.testapp.models import TestModel
 
 
 class MainTests(TestCase):

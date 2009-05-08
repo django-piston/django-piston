@@ -2,7 +2,7 @@ from django.conf.urls.defaults import *
 from piston.resource import Resource
 from piston.authentication import HttpBasicAuthentication
 
-from .handlers import EntryHandler
+from test_project.apps.testapp.handlers import EntryHandler
 
 auth = HttpBasicAuthentication(realm='TestApplication')
 
