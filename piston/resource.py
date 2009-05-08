@@ -61,7 +61,7 @@ class Resource(object):
                 return self.authentication.challenge()
         else:
             handler = self.handler
-            anonymous = False
+            anonymous = handler.is_anonymous
         
         rm = request.method.upper()
         
