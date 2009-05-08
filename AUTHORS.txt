@@ -5,4 +5,7 @@ Alberto Donacko provided a fix for #26
 Matthew Marshall provided fixes for #25 and #24
 Pete Karl reported #20
 Travis Jensen provided a fix for #24
+Benoit Chesneau provided some mimetype helpers
+Adam Lowry fixed a bug with the callmap construct
+Benjamin Pollack provided an ez_setup fix and more
 
