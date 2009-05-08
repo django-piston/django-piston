@@ -9,17 +9,9 @@ from django.core.mail import send_mail, EmailMessage
 from emitters import Emitter
 from handler import typemapper
 from doc import HandlerMethod
+from authentication import NoAuthentication
 from utils import coerce_put_post, FormValidationError, HttpStatusCode
 from utils import rc, format_error, translate_mime
-
-class NoAuthentication(object):
-    """
-    Authentication handler that always returns
-    True, so no authentication is needed, nor
-    initiated (`challenge` is missing.)
-    """
-    def is_authenticated(self, request):
-        return True
 
 class Resource(object):
     """
