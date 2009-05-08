@@ -115,7 +115,7 @@ class Emitter(object):
                     """
                     mapped = self.in_typemapper(type(data), self.anonymous)
                     get_fields = set(mapped.fields)
-                    exclude_fields = set(mapped.exclude)
+                    exclude_fields = set(mapped.exclude).difference(get_fields)
                 
                     if not get_fields:
                         get_fields = set([ f.attname.replace("_id", "", 1)
