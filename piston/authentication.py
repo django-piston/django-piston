@@ -8,6 +8,15 @@ from django.core.urlresolvers import get_callable
 import oauth
 from store import DataStore
 
+class NoAuthentication(object):
+    """
+    Authentication handler that always returns
+    True, so no authentication is needed, nor
+    initiated (`challenge` is missing.)
+    """
+    def is_authenticated(self, request):
+        return True
+
 def django_auth(username, password):
     """
     Basic callback for `HttpBasicAuthentication`
