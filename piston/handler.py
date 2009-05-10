@@ -73,6 +73,8 @@ class BaseHandler(object):
             inst = self.model(**attrs)
             inst.save()
             return inst
+        except self.model.MultipleObjectsReturned:
+            return rc.DUPLICATE_ENTRY
     
     def update(self, request, *args, **kwargs):
         # TODO: This doesn't work automatically yet.
