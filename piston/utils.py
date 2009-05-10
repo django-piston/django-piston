@@ -15,22 +15,34 @@ def format_error(error):
     return u"Piston/%s (Django %s) crash report:\n\n%s" % \
         (get_version(), django_version(), error)
 
-def create_reply(message, status=200):
-    return HttpResponse(message, status=status)
-
-class rc(object):
+class rc_factory(object):
     """
     Status codes.
     """
-    ALL_OK = create_reply('OK', status=200)
-    CREATED = create_reply('Created', status=201)
-    DELETED = create_reply('', status=204) # 204 says "Don't send a body!"
-    BAD_REQUEST = create_reply('Bad Request', status=400)
-    FORBIDDEN = create_reply('Forbidden', status=401)
-    DUPLICATE_ENTRY = create_reply('Conflict/Duplicate', status=409)
-    NOT_HERE = create_reply('Gone', status=410)
-    NOT_IMPLEMENTED = create_reply('Not Implemented', status=501)
-    THROTTLED = create_reply('Throttled', status=503)
+    CODES = dict(ALL_OK = ('OK', 200),
+                 CREATED = ('Created', 201),
+                 DELETED = ('', 204), # 204 says "Don't send a body!"
+                 BAD_REQUEST = ('Bad Request', 400),
+                 FORBIDDEN = ('Forbidden', 401),
+                 DUPLICATE_ENTRY = ('Conflict/Duplicate', 409),
+                 NOT_HERE = ('Gone', 410),
+                 NOT_IMPLEMENTED = ('Not Implemented', 501),
+                 THROTTLED = ('Throttled', 503))
+
+    def __getattr__(self, attr):
+        """
+        Returns a fresh `HttpResponse` when getting 
+        an "attribute". This is backwards compatible
+        with 0.2, which is important.
+        """
+        try:
+            (r, c) = self.CODES.get(attr)
+        except TypeError:
+            raise AttributeError(attr)
+
+        return HttpResponse(r, c)
+    
+rc = rc_factory()
     
 class FormValidationError(Exception):
     def __init__(self, form):
@@ -47,7 +59,6 @@ def validate(v_form, operation='POST'):
         form = v_form(getattr(request, operation))
     
         if form.is_valid():
-#            kwa.update({ 'form': form })
             return f(self, request, *a, **kwa)
         else:
             raise FormValidationError(form)
