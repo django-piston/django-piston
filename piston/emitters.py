@@ -50,7 +50,7 @@ class Emitter(object):
     
     def method_fields(self, data, fields):
         if not data:
-            return data
+            return { }
 
         has = dir(data)
         ret = dict()

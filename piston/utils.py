@@ -151,7 +151,7 @@ class Mimer(object):
                 return loadee
 
     def content_type(self):
-        return self.request.META.get('CONTENT_TYPE')
+        return self.request.META.get('CONTENT_TYPE', None)
 
     def translate(self):
         """
@@ -167,12 +167,12 @@ class Mimer(object):
         None for multipart form data (what your browser sends.)
         """    
         ctype = self.content_type()
+        self.request.content_type = ctype
         
         if not self.is_multipart() and ctype:
             loadee = self.loader_for_type(ctype)
             
             try:
-                self.request.content_type = ctype
                 self.request.data = loadee(self.request.raw_post_data)
                 
                 # Reset both POST and PUT from request, as its
