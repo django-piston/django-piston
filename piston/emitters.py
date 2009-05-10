@@ -183,7 +183,7 @@ class Emitter(object):
                         # Overriding normal field which has a "resource method"
                         # so you can alter the contents of certain fields without
                         # using different names.
-                        ret[maybe_field] = met_fields[maybe_field](data)
+                        ret[maybe_field] = _any(met_fields[maybe_field](data))
 
                     else:                    
                         maybe = getattr(data, maybe_field, None)
@@ -194,7 +194,7 @@ class Emitter(object):
                             handler_f = getattr(handler or self.handler, maybe_field, None)
 
                             if handler_f:
-                                ret[maybe_field] = handler_f(data)
+                                ret[maybe_field] = _any(handler_f(data))
 
             else:
                 for f in data._meta.fields:
