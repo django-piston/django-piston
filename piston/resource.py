@@ -49,7 +49,7 @@ class Resource(object):
         since that pretty much makes sense. Refer to `Mimer` for
         that as well.
         """
-        em = kwargs.pop('emitter_format')
+        em = kwargs.pop('emitter_format', None)
         
         if not em:
             em = request.GET.get('format', 'json')
@@ -92,7 +92,8 @@ class Resource(object):
 
         # Support emitter both through (?P<emitter_format>) and ?format=emitter.
         em_format = self.determine_emitter(request, *args, **kwargs)
-        kwargs.pop('emitter_format')
+
+        kwargs.pop('emitter_format', None)
         
         # Clean up the request object a bit, since we might
         # very well have `oauth_`-headers in there, and we
