@@ -14,6 +14,7 @@ from django.utils.xmlutils import SimplerXMLGenerator
 from django.utils.encoding import smart_unicode
 from django.core.serializers.json import DateTimeAwareJSONEncoder
 from django.http import HttpResponse
+from django.core import serializers
 
 from utils import HttpStatusCode, Mimer
 
@@ -169,7 +170,8 @@ class Emitter(object):
                             if isinstance(maybe, (int, basestring)):
                                 ret[maybe_field] = _any(maybe)
                         else:
-                            handler_f = getattr(self.handler, maybe_field, None)
+                            handler = self.in_typemapper(type(data), self.anonymous)
+                            handler_f = getattr(handler or self.handler, maybe_field, None)
 
                             if handler_f:
                                 ret[maybe_field] = handler_f(data)
@@ -330,3 +332,19 @@ class PickleEmitter(Emitter):
         
 Emitter.register('pickle', PickleEmitter, 'application/python-pickle')
 Mimer.register(pickle.loads, ('application/python-pickle',))
+
+class DjangoEmitter(Emitter):
+    """
+    Emitter for the Django serialized format.
+    """
+    def render(self, request):
+        if isinstance(self.data, HttpResponse):
+            return self.data
+        elif isinstance(self.data, (int, str)):
+            response = self.data
+        else:
+            response = serializers.serialize('xml', self.data, indent=True)
+
+        return response
+        
+Emitter.register('django', DjangoEmitter, 'text/xml; charset=utf-8')
