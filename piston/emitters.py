@@ -48,6 +48,19 @@ class Emitter(object):
         if isinstance(self.data, Exception):
             raise
     
+    def method_fields(self, data, fields):
+        if not data:
+            return data
+
+        has = dir(data)
+        ret = dict()
+            
+        for field in fields:
+            if field in has:
+                ret[field] = getattr(data, field)
+        
+        return ret
+    
     def construct(self):
         """
         Recursively serialize a lot of types, and
@@ -104,9 +117,9 @@ class Emitter(object):
             `exclude` on the handler (see `typemapper`.)
             """
             ret = { }
+            handler = self.in_typemapper(type(data), self.anonymous)
             
-            if self.in_typemapper(type(data), self.anonymous) or fields:
-
+            if handler or fields:
                 v = lambda f: getattr(data, f.attname)
 
                 if not fields:
@@ -134,8 +147,10 @@ class Emitter(object):
                 else:
                     get_fields = set(fields)
 
+                met_fields = self.method_fields(handler, get_fields)
+
                 for f in data._meta.local_fields:
-                    if f.serialize:
+                    if f.serialize and f.attname not in met_fields:
                         if not f.rel:
                             if f.attname in get_fields:
                                 ret[f.attname] = _any(v(f))
@@ -146,14 +161,14 @@ class Emitter(object):
                                 get_fields.remove(f.name)
                 
                 for mf in data._meta.many_to_many:
-                    if mf.serialize:
+                    if mf.serialize and mf.attname not in met_fields:
                         if mf.attname in get_fields:
                             ret[mf.name] = _m2m(data, mf)
                             get_fields.remove(mf.name)
                 
                 # try to get the remainder of fields
                 for maybe_field in get_fields:
-
+                    
                     if isinstance(maybe_field, (list, tuple)):
                         model, fields = maybe_field
                         inst = getattr(data, model, None)
@@ -164,13 +179,18 @@ class Emitter(object):
                             else:
                                 ret[model] = _model(inst, fields)
 
+                    elif maybe_field in met_fields:
+                        # Overriding normal field which has a "resource method"
+                        # so you can alter the contents of certain fields without
+                        # using different names.
+                        ret[maybe_field] = met_fields[maybe_field](data)
+
                     else:                    
                         maybe = getattr(data, maybe_field, None)
                         if maybe:
                             if isinstance(maybe, (int, basestring)):
                                 ret[maybe_field] = _any(maybe)
                         else:
-                            handler = self.in_typemapper(type(data), self.anonymous)
                             handler_f = getattr(handler or self.handler, maybe_field, None)
 
                             if handler_f:
