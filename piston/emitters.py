@@ -357,13 +357,13 @@ class DjangoEmitter(Emitter):
     """
     Emitter for the Django serialized format.
     """
-    def render(self, request):
+    def render(self, request, format='xml'):
         if isinstance(self.data, HttpResponse):
             return self.data
         elif isinstance(self.data, (int, str)):
             response = self.data
         else:
-            response = serializers.serialize('xml', self.data, indent=True)
+            response = serializers.serialize(format, self.data, indent=True)
 
         return response
         
