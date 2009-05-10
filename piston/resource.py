@@ -39,6 +39,23 @@ class Resource(object):
         self.email_errors = getattr(settings, 'PISTON_EMAIL_ERRORS', True)
         self.display_errors = getattr(settings, 'PISTON_DISPLAY_ERRORS', True)
     
+    def determine_emitter(self, request, *args, **kwargs):
+        """
+        Function for determening which emitter to use
+        for output. It lives here so you can easily subclass
+        `Resource` in order to change how emission is detected.
+
+        You could also check for the `Accept` HTTP header here,
+        since that pretty much makes sense. Refer to `Mimer` for
+        that as well.
+        """
+        em = kwargs.pop('emitter_format')
+        
+        if not em:
+            em = request.GET.get('format', 'json')
+
+        return em
+    
     @vary_on_headers('Authorization')
     def __call__(self, request, *args, **kwargs):
         """
@@ -74,7 +91,8 @@ class Resource(object):
             raise Http404
 
         # Support emitter both through (?P<emitter_format>) and ?format=emitter.
-        em_format = kwargs.pop('emitter_format', request.GET.get('format', 'json'))
+        em_format = self.determine_emitter(request, *args, **kwargs)
+        kwargs.pop('emitter_format')
         
         # Clean up the request object a bit, since we might
         # very well have `oauth_`-headers in there, and we
