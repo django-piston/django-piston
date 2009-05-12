@@ -38,7 +38,8 @@ class Resource(object):
         # Erroring
         self.email_errors = getattr(settings, 'PISTON_EMAIL_ERRORS', True)
         self.display_errors = getattr(settings, 'PISTON_DISPLAY_ERRORS', True)
-    
+        self.stream = getattr(settings, 'PISTON_STREAM_OUTPUT', False)
+
     def determine_emitter(self, request, *args, **kwargs):
         """
         Function for determening which emitter to use
@@ -153,7 +154,20 @@ class Resource(object):
         srl = emitter(result, typemapper, handler, handler.fields, anonymous)
         
         try:
-            return HttpResponse(srl.render(request), mimetype=ct)
+            """
+            Decide whether or not we want a generator here,
+            or we just want to buffer up the entire result
+            before sending it to the client. Won't matter for
+            smaller datasets, but larger will have an impact.
+            """
+            if self.stream: stream = srl.stream_render(request)
+            else: stream = srl.render(request)
+
+            resp = HttpResponse(stream, mimetype=ct)
+
+            resp.streaming = self.stream
+
+            return resp
         except HttpStatusCode, e:
             return HttpResponse(e.message, status=e.code)
 

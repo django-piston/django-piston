@@ -13,3 +13,8 @@ TEMPLATE_DIRS = (
     os.path.join(os.path.dirname(__file__), 'templates'),
 )
 ROOT_URLCONF = 'test_project.urls'
+
+MIDDLEWARE_CLASSES = (
+    'piston.middleware.ConditionalMiddlewareCompatProxy',
+    'piston.middleware.CommonMiddlewareCompatProxy',
+)

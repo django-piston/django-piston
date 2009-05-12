@@ -1,3 +1,5 @@
+from __future__ import generators
+
 import types, decimal, types, re, inspect
 
 try:
@@ -251,6 +253,15 @@ class Emitter(object):
         this is a job for the specific emitter below.
         """
         raise NotImplementedError("Please implement render.")
+        
+    def stream_render(self, request, stream=True):
+        """
+        Tells our patched middleware not to look
+        at the contents, and returns a generator
+        rather than the buffered string. Should be
+        more memory friendly for large datasets.
+        """
+        yield self.render(request)
         
     @classmethod
     def get(cls, format):
