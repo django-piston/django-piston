@@ -63,7 +63,7 @@ class Resource(object):
         that are different (OAuth stuff in `Authorization` header.)
         """
         if not self.authentication.is_authenticated(request):
-            if self.handler.anonymous and callable(self.handler.anonymous):
+            if hasattr(self.handler, 'anonymous') and callable(self.handler.anonymous):
                 handler = self.handler.anonymous()
                 anonymous = True
             else:
