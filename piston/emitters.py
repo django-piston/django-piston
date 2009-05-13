@@ -226,9 +226,10 @@ class Emitter(object):
                 except: pass
             
             return ret
+        
         def _qs(data, fields=()):
             """
-            Lists.
+            Querysets.
             """
             return [ _any(v, fields) for v in data ]
                 
