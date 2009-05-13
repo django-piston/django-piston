@@ -1,5 +1,7 @@
 import inspect, handler
 
+from django.core.urlresolvers import get_resolver, get_callable, get_script_prefix
+
 def generate_doc(handler_cls):
     """
     Returns a `HandlerDocumentation` object
@@ -81,10 +83,53 @@ class HandlerDocumentation(object):
 
     def get_model(self):
         return getattr(self, 'model', None)
+            
+    def get_doc(self):
+        return self.handler.__doc__
     
+    doc = property(get_doc)
+
     @property
     def name(self):
         return self.handler.__name__
+    
+    def get_resource_uri_template(self):
+        """URI template processor"""
+        
+        def _convert(template, params=[]):
+            """URI template converter"""
+            paths = template % dict([p, "{%s}" % p] for p in params)
+            return u'%s%s' % (get_script_prefix(), paths)
+        
+        try:
+            resource_uri = self.handler.resource_uri()
+            
+            components = [None, [], {}]
+            for i, value in enumerate(resource_uri):
+                components[i] = value
+        
+            lookup_view, args, kwargs = components
+        
+            lookup_view = get_callable(lookup_view, True)
+
+            possibilities = get_resolver(None).reverse_dict.getlist(lookup_view)
+            
+            for possibility, pattern in possibilities:
+                for result, params in possibility:
+                    if args:
+                        if len(args) != len(params):
+                            continue
+                        return _convert(result, params)
+                    else:
+                        if set(kwargs.keys()) != set(params):
+                            continue
+                        return _convert(result, params)
+        except:
+            pass
+        
+        return None
+        
+    resource_uri_template = property(get_resource_uri_template)
     
     def __repr__(self):
         return u'<Documentation for "%s">' % self.name
