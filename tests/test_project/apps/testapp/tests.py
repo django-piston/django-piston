@@ -67,7 +67,7 @@ class IncomingExpressiveTests(MainTests):
         resp = self.client.post('/api/expressive.json', outgoing, content_type='application/json',
             HTTP_AUTHORIZATION=self.auth_string)
             
-        self.assertEquals(resp.status_code, 200)
+        self.assertEquals(resp.status_code, 201)
         
         expected = '[{"content": "bar", "comments": [], "title": "foo"}, {"content": "bar2", "comments": [], "title": "foo2"}, {"content": "test", "comments": [{"content": "test1"}, {"content": "test2"}], "title": "test"}]'
         
@@ -96,7 +96,7 @@ class IncomingExpressiveTests(MainTests):
         resp = self.client.post('/api/expressive.json', outgoing, content_type='application/x-yaml',
             HTTP_AUTHORIZATION=self.auth_string)
         
-        self.assertEquals(resp.status_code, 200)
+        self.assertEquals(resp.status_code, 201)
         
         expected = """- comments: []
   content: bar
