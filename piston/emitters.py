@@ -178,6 +178,9 @@ class Emitter(object):
                         if inst:
                             if hasattr(inst, 'all'):
                                 ret[model] = _related(inst, fields)
+                            elif callable(inst):
+                                if len(inspect.getargspec(inst)[0]) == 1:
+                                    ret[model] = _any(inst(), fields)
                             else:
                                 ret[model] = _model(inst, fields)
 
@@ -192,6 +195,9 @@ class Emitter(object):
                         if maybe:
                             if isinstance(maybe, (int, basestring)):
                                 ret[maybe_field] = _any(maybe)
+                            elif callable(maybe):
+                                if len(inspect.getargspec(maybe)[0]) == 1:
+                                    ret[maybe_field] = _any(maybe())
                         else:
                             handler_f = getattr(handler or self.handler, maybe_field, None)
 
