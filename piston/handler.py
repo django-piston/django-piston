@@ -1,4 +1,5 @@
 from piston.utils import rc
+from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 
 typemapper = { }
 
@@ -57,8 +58,18 @@ class BaseHandler(object):
     def read(self, request, *args, **kwargs):
         if not self.has_model():
             return rc.NOT_IMPLEMENTED
-        
-        return self.model.objects.filter(*args, **kwargs)
+
+        pkfield = self.model._meta.pk.name
+
+        if pkfield in kwargs:
+            try:
+                return self.model.objects.get(pk=kwargs.get(pkfield))
+            except ObjectDoesNotExist:
+                return rc.NOT_FOUND
+            except MultipleObjectsReturned: # should never happen, since we're using a PK
+                return rc.BAD_REQUEST
+        else:
+            return self.model.objects.filter(*args, **kwargs)
     
     def create(self, request, *args, **kwargs):
         if not self.has_model():
