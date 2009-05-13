@@ -40,7 +40,7 @@ class rc_factory(object):
         except TypeError:
             raise AttributeError(attr)
 
-        return HttpResponse(r, c)
+        return HttpResponse(r, content_type='text/plain', status=c)
     
 rc = rc_factory()
     
