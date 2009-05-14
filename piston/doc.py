@@ -94,7 +94,11 @@ class HandlerDocumentation(object):
         return self.handler.__name__
     
     def get_resource_uri_template(self):
-        """URI template processor"""
+        """
+        URI template processor.
+        
+        See http://bitworking.org/projects/URI-Templates/
+        """
         
         def _convert(template, params=[]):
             """URI template converter"""
@@ -109,7 +113,6 @@ class HandlerDocumentation(object):
                 components[i] = value
         
             lookup_view, args, kwargs = components
-        
             lookup_view = get_callable(lookup_view, True)
 
             possibilities = get_resolver(None).reverse_dict.getlist(lookup_view)
@@ -125,9 +128,7 @@ class HandlerDocumentation(object):
                             continue
                         return _convert(result, params)
         except:
-            pass
-        
-        return None
+            return None
         
     resource_uri_template = property(get_resource_uri_template)
     

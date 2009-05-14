@@ -79,7 +79,7 @@ class Emitter(object):
             
             if isinstance(thing, QuerySet):
                 ret = _qs(thing, fields=fields)
-            elif isinstance(thing, (tuple, list, QuerySet)):
+            elif isinstance(thing, (tuple, list)):
                 ret = _list(thing)
             elif isinstance(thing, dict):
                 ret = _dict(thing)
