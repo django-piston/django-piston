@@ -1,3 +1,5 @@
+from __future__ import generators
+
 import types, decimal, types, re, inspect
 
 try:
@@ -178,6 +180,9 @@ class Emitter(object):
                         if inst:
                             if hasattr(inst, 'all'):
                                 ret[model] = _related(inst, fields)
+                            elif callable(inst):
+                                if len(inspect.getargspec(inst)[0]) == 1:
+                                    ret[model] = _any(inst(), fields)
                             else:
                                 ret[model] = _model(inst, fields)
 
@@ -192,6 +197,9 @@ class Emitter(object):
                         if maybe:
                             if isinstance(maybe, (int, basestring)):
                                 ret[maybe_field] = _any(maybe)
+                            elif callable(maybe):
+                                if len(inspect.getargspec(maybe)[0]) == 1:
+                                    ret[maybe_field] = _any(maybe())
                         else:
                             handler_f = getattr(handler or self.handler, maybe_field, None)
 
@@ -259,6 +267,15 @@ class Emitter(object):
         this is a job for the specific emitter below.
         """
         raise NotImplementedError("Please implement render.")
+        
+    def stream_render(self, request, stream=True):
+        """
+        Tells our patched middleware not to look
+        at the contents, and returns a generator
+        rather than the buffered string. Should be
+        more memory friendly for large datasets.
+        """
+        yield self.render(request)
         
     @classmethod
     def get(cls, format):
