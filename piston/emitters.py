@@ -77,7 +77,9 @@ class Emitter(object):
             """
             ret = None
             
-            if isinstance(thing, (tuple, list, QuerySet)):
+            if isinstance(thing, QuerySet):
+                ret = _qs(thing, fields=fields)
+            elif isinstance(thing, (tuple, list, QuerySet)):
                 ret = _list(thing)
             elif isinstance(thing, dict):
                 ret = _dict(thing)
@@ -233,6 +235,12 @@ class Emitter(object):
             
             return ret
         
+        def _qs(data, fields=()):
+            """
+            Querysets.
+            """
+            return [ _any(v, fields) for v in data ]
+                
         def _list(data):
             """
             Lists.

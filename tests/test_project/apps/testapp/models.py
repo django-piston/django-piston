@@ -7,6 +7,7 @@ class TestModel(models.Model):
 class ExpressiveTestModel(models.Model):
     title = models.CharField(max_length=255)
     content = models.TextField()
+    never_shown = models.TextField()
     
 class Comment(models.Model):
     parent = models.ForeignKey(ExpressiveTestModel, related_name='comments')

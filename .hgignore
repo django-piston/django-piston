@@ -9,3 +9,4 @@ parts
 downloads
 .installed.cfg
 develop-eggs
+.DS_Store
