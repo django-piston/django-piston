@@ -10,3 +10,4 @@ Adam Lowry fixed a bug with the callmap construct
 Benjamin Pollack provided an ez_setup fix and more
 Seph Soliman for fixing a bug with AnonymousBaseHandler
 David Larlet for suggesting several improvements
+Xavier Barbosa for improving QuerySet handling and providing Template URI code
