@@ -3,7 +3,7 @@ from django.core.paginator import Paginator
 from piston.handler import BaseHandler
 from piston.utils import rc, validate
 
-from models import TestModel, ExpressiveTestModel, Comment
+from models import TestModel, ExpressiveTestModel, Comment, InheritedModel
 
 class EntryHandler(BaseHandler):
     model = TestModel
@@ -41,4 +41,15 @@ class ExpressiveHandler(BaseHandler):
             return rc.CREATED
         else:
             super(ExpressiveTestModel, self).create(request)
+            
+            
+class AbstractHandler(BaseHandler):
+    fields = ('id', 'some_other', 'some_field')
+    model = InheritedModel
+    
+    def read(self, request, id_=None):
+        if id_:
+            return self.model.objects.get(pk=id_)
+        else:
+            return super(AbstractHandler, self).read(request)
             
