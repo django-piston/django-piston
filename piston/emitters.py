@@ -122,7 +122,7 @@ class Emitter(object):
             """
             ret = { }
             handler = self.in_typemapper(type(data), self.anonymous)
-            get_absolute_uri = True
+            get_absolute_uri = False
             
             if handler or fields:
                 v = lambda f: getattr(data, f.attname)
@@ -135,6 +135,9 @@ class Emitter(object):
                     mapped = self.in_typemapper(type(data), self.anonymous)
                     get_fields = set(mapped.fields)
                     exclude_fields = set(mapped.exclude).difference(get_fields)
+
+                    if 'absolute_uri' in get_fields:
+                        get_absolute_uri = True
                 
                     if not get_fields:
                         get_fields = set([ f.attname.replace("_id", "", 1)
@@ -144,9 +147,6 @@ class Emitter(object):
                     for exclude in exclude_fields:
                         if isinstance(exclude, basestring):
                             get_fields.discard(exclude)
-
-                            if exclude == 'absolute_uri':
-                                get_absolute_uri = False
                             
                         elif isinstance(exclude, re._pattern_type):
                             for field in get_fields.copy():
