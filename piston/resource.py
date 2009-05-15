@@ -103,9 +103,9 @@ class Resource(object):
         
         try:
             result = meth(request, *args, **kwargs)
-        except FormValidationError, form:
+        except FormValidationError, e:
             # TODO: Use rc.BAD_REQUEST here
-            return HttpResponse("Bad Request: %s" % form.errors, status=400)
+            return HttpResponse("Bad Request: %s" % e.form.errors, status=400)
         except TypeError, e:
             result = rc.BAD_REQUEST
             hm = HandlerMethod(meth)
