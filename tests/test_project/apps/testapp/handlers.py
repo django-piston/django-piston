@@ -4,6 +4,8 @@ from piston.handler import BaseHandler
 from piston.utils import rc, validate
 
 from models import TestModel, ExpressiveTestModel, Comment, InheritedModel
+from forms import EchoForm
+
 
 class EntryHandler(BaseHandler):
     model = TestModel
@@ -52,4 +54,11 @@ class AbstractHandler(BaseHandler):
             return self.model.objects.get(pk=id_)
         else:
             return super(AbstractHandler, self).read(request)
-            
+
+
+class EchoHandler(BaseHandler):
+    allowed_methods = ('GET', )
+
+    @validate(EchoForm, 'GET')
+    def read(self, request):
+        return {'msg': request.GET['msg']}
