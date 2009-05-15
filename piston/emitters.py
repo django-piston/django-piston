@@ -122,6 +122,7 @@ class Emitter(object):
             """
             ret = { }
             handler = self.in_typemapper(type(data), self.anonymous)
+            get_absolute_uri = True
             
             if handler or fields:
                 v = lambda f: getattr(data, f.attname)
@@ -143,6 +144,10 @@ class Emitter(object):
                     for exclude in exclude_fields:
                         if isinstance(exclude, basestring):
                             get_fields.discard(exclude)
+
+                            if exclude == 'absolute_uri':
+                                get_absolute_uri = False
+                            
                         elif isinstance(exclude, re._pattern_type):
                             for field in get_fields.copy():
                                 if exclude.match(field):
@@ -229,7 +234,7 @@ class Emitter(object):
                 except: pass
             
             # absolute uri
-            if hasattr(data, 'get_absolute_url'):
+            if hasattr(data, 'get_absolute_url') and get_absolute_uri:
                 try: ret['absolute_uri'] = data.get_absolute_url()
                 except: pass
             
