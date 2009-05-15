@@ -10,7 +10,7 @@ except ImportError:
 
 import base64
 
-from test_project.apps.testapp.models import TestModel, ExpressiveTestModel, Comment
+from test_project.apps.testapp.models import TestModel, ExpressiveTestModel, Comment, InheritedModel
 
 class MainTests(TestCase):
     def setUp(self):
@@ -46,6 +46,33 @@ class MultiXMLTests(MainTests):
         result = self.client.get('/api/entry-%d.xml' % (obj.pk,),
                 HTTP_AUTHORIZATION=self.auth_string).content
         self.assertEquals(expected, result)
+
+class AbstractBaseClassTests(MainTests):
+    def init_delegate(self):
+        self.ab1 = InheritedModel()
+        self.ab1.save()
+        self.ab2 = InheritedModel()
+        self.ab2.save()
+        
+    def test_field_presence(self):
+        result = self.client.get('/api/abstract.json',
+                HTTP_AUTHORIZATION=self.auth_string).content
+                
+        expected = '[{"id": 1, "some_other": "something else", "some_field": "something here"}, {"id": 2, "some_other": "something else", "some_field": "something here"}]'
+        
+        self.assertEquals(result, expected)
+
+    def test_specific_id(self):
+        ids = (1, 2)
+        be = '{"id": %d, "some_other": "something else", "some_field": "something here"}'
+        
+        for id_ in ids:
+            result = self.client.get('/api/abstract/%d.json' % id_,
+                    HTTP_AUTHORIZATION=self.auth_string).content
+                    
+            expected = be % id_
+                    
+            self.assertEquals(result, expected)
 
 class IncomingExpressiveTests(MainTests):
     def init_delegate(self):

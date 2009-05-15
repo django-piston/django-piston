@@ -12,4 +12,15 @@ class ExpressiveTestModel(models.Model):
 class Comment(models.Model):
     parent = models.ForeignKey(ExpressiveTestModel, related_name='comments')
     content = models.TextField()
+
+class AbstractModel(models.Model):
+    some_field = models.CharField(max_length=32, default='something here')
     
+    class Meta:
+        abstract = True
+        
+class InheritedModel(AbstractModel):
+    some_other = models.CharField(max_length=32, default='something else')
+    
+    class Meta:
+        db_table = 'testing_abstracts'

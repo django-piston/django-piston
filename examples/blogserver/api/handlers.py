@@ -5,7 +5,7 @@ from blogserver.blog.models import Blogpost
 
 class AnonymousBlogpostHandler(AnonymousBaseHandler):
     model = Blogpost
-    fields = ('title', 'content', 'created_on')
+    fields = ('id', 'title', 'content', 'created_on')
 
 class BlogpostHandler(BaseHandler):
     model = Blogpost
