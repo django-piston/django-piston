@@ -139,3 +139,19 @@ class IncomingExpressiveTests(MainTests):
 """
         self.assertEquals(self.client.get('/api/expressive.yaml', 
             HTTP_AUTHORIZATION=self.auth_string).content, expected)
+
+
+class ValidationTest(MainTests):
+    def test_basic_validation_fails(self):
+        resp = self.client.get('/api/echo')
+        self.assertEquals(resp.status_code, 400)
+        self.assertEquals(resp.content, 'Bad Request: <ul class="errorlist">'
+            '<li>msg<ul class="errorlist"><li>This field is required.</li>'
+            '</ul></li></ul>')
+
+    def test_basic_validation_succeeds(self):
+        data = {'msg': 'donuts!'}
+        resp = self.client.get('/api/echo', data)
+        self.assertEquals(resp.status_code, 200)
+        self.assertEquals(data, simplejson.loads(resp.content))
+
