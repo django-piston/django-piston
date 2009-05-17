@@ -169,7 +169,7 @@ class Resource(object):
 
             return resp
         except HttpStatusCode, e:
-            return HttpResponse(e.message, status=e.code)
+            return HttpResponse(e.msg, status=e.code)
 
     @staticmethod
     def cleanup_request(request):
