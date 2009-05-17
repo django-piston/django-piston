@@ -50,8 +50,8 @@ class FormValidationError(Exception):
         self.form = form
 
 class HttpStatusCode(Exception):
-    def __init__(self, message, code=200):
-        self.message = message
+    def __init__(self, msg, code=200):
+        self.msg = msg
         self.code = code
 
 def validate(v_form, operation='POST'):
