@@ -5,9 +5,10 @@ from django.template import loader
 from django.contrib.auth import authenticate
 from django.conf import settings
 from django.core.urlresolvers import get_callable
+from django.core.exceptions import ImproperlyConfigured
+from django.utils.importlib import import_module
 
 import oauth
-from store import DataStore
 
 class NoAuthentication(object):
     """
@@ -61,6 +62,26 @@ class HttpBasicAuthentication(object):
         resp.status_code = 401
         return resp
 
+def load_data_store(oauth_request):
+    '''Load data store for OAuth Consumers, Tokens, Nonces and Resources
+    '''
+    path = getattr(settings, 'OAUTH_DATA_STORE', 'piston.store.DataStore')
+
+    # stolen from django.contrib.auth.load_backend
+    i = path.rfind('.')
+    module, attr = path[:i], path[i+1:]
+    try:
+        mod = import_module(module)
+    except ImportError, e:
+        raise ImproperlyConfigured, 'Error importing OAuth data store %s: "%s"' % (module, e)
+
+    try:
+        cls = getattr(mod, attr)
+    except AttributeError:
+        raise ImproperlyConfigured, 'Module %s does not define a "%s" OAuth data store' % (module, attr)
+
+    return cls(oauth_request)
+
 def initialize_server_request(request):
     """
     Shortcut for initialization.
@@ -71,7 +92,7 @@ def initialize_server_request(request):
         query_string=request.environ.get('QUERY_STRING', ''))
         
     if oauth_request:
-        oauth_server = oauth.OAuthServer(DataStore(oauth_request))
+        oauth_server = oauth.OAuthServer(load_data_store(oauth_request))
         oauth_server.add_signature_method(oauth.OAuthSignatureMethod_PLAINTEXT())
         oauth_server.add_signature_method(oauth.OAuthSignatureMethod_HMAC_SHA1())
     else:
