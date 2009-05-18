@@ -62,7 +62,9 @@ class HttpBasicAuthentication(object):
         resp.status_code = 401
         return resp
 
-def load_data_store(oauth_request):
+DataStore = None
+
+def load_data_store():
     '''Load data store for OAuth Consumers, Tokens, Nonces and Resources
     '''
     path = getattr(settings, 'OAUTH_DATA_STORE', 'piston.store.DataStore')
@@ -80,7 +82,7 @@ def load_data_store(oauth_request):
     except AttributeError:
         raise ImproperlyConfigured, 'Module %s does not define a "%s" OAuth data store' % (module, attr)
 
-    return cls(oauth_request)
+    return cls
 
 def initialize_server_request(request):
     """
@@ -92,7 +94,11 @@ def initialize_server_request(request):
         query_string=request.environ.get('QUERY_STRING', ''))
         
     if oauth_request:
-        oauth_server = oauth.OAuthServer(load_data_store(oauth_request))
+        global DataStore
+        if DataStore is None:
+            DataStore = load_data_store()
+
+        oauth_server = oauth.OAuthServer(DataStore(oauth_request))
         oauth_server.add_signature_method(oauth.OAuthSignatureMethod_PLAINTEXT())
         oauth_server.add_signature_method(oauth.OAuthSignatureMethod_HMAC_SHA1())
     else:
