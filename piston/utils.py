@@ -126,10 +126,25 @@ def throttle(max_requests, timeout=60*60, extra=''):
     return wrap
 
 def coerce_put_post(request):
+    """
+    Django doesn't particularly understand REST.
+    In case we send data over PUT, Django won't
+    actually look at the data and load it. We need
+    to twist its arm here.
+    
+    The try/except abominiation here is due to a bug
+    in mod_python. This should fix it.
+    """
     if request.method == "PUT":
-        request.method = "POST"
-        request._load_post_and_files()
-        request.method = "PUT"
+        try:
+            request.method = "POST"
+            request._load_post_and_files()
+            request.method = "PUT"
+        except AttributeError:
+            request.META['REQUEST_METHOD'] = 'POST'
+            request._load_post_and_files()
+            request.META['REQUEST_METHOD'] = 'PUT'
+            
         request.PUT = request.POST
 
 class Mimer(object):
