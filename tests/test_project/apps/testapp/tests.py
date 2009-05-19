@@ -11,6 +11,7 @@ except ImportError:
 import base64
 
 from test_project.apps.testapp.models import TestModel, ExpressiveTestModel, Comment, InheritedModel
+from test_project.apps.testapp import signals
 
 class MainTests(TestCase):
     def setUp(self):
@@ -140,6 +141,51 @@ class IncomingExpressiveTests(MainTests):
         self.assertEquals(self.client.get('/api/expressive.yaml', 
             HTTP_AUTHORIZATION=self.auth_string).content, expected)
 
+class Issue36RegressionTests(MainTests):
+    """
+    This testcase addresses #36 in django-piston where request.FILES is passed
+    empty to the handler if the request.method is PUT.
+    """
+    def fetch_request(self, sender, request, *args, **kwargs):
+        self.request = request
+
+    def setUp(self):
+        super(self.__class__, self).setUp()
+        self.data = TestModel()
+        self.data.save()
+        # Register to the WSGIRequest signals to get the latest generated
+        # request object.
+        signals.entry_request_started.connect(self.fetch_request)
+
+    def tearDown(self):
+        super(self.__class__, self).tearDown()
+        self.data.delete()
+        signals.entry_request_started.disconnect(self.fetch_request)
+    
+    def test_simple(self):
+        # First try it with POST to see if it works there
+        if True:
+            fp = open(__file__, 'r')
+            try:
+                response = self.client.post('/api/entries.xml',
+                        {'file':fp}, HTTP_AUTHORIZATION=self.auth_string)
+                self.assertEquals(1, len(self.request.FILES), 'request.FILES on POST is empty when it should contain 1 file')
+            finally:
+                fp.close()
+
+        if not hasattr(self.client, 'put'):
+            import warnings
+            warnings.warn('Issue36RegressionTest partially requires Django 1.1 or newer. Skipped.')
+            return
+
+        # ... and then with PUT
+        fp = open(__file__, 'r')
+        try:
+            response = self.client.put('/api/entry-%d.xml' % self.data.pk,
+                    {'file': fp}, HTTP_AUTHORIZATION=self.auth_string)
+            self.assertEquals(1, len(self.request.FILES), 'request.FILES on PUT is empty when it should contain 1 file')
+        finally:
+            fp.close()
 
 class ValidationTest(MainTests):
     def test_basic_validation_fails(self):
@@ -154,4 +200,3 @@ class ValidationTest(MainTests):
         resp = self.client.get('/api/echo', data)
         self.assertEquals(resp.status_code, 200)
         self.assertEquals(data, simplejson.loads(resp.content))
-

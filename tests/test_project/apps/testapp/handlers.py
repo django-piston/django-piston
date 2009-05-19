@@ -5,17 +5,25 @@ from piston.utils import rc, validate
 
 from models import TestModel, ExpressiveTestModel, Comment, InheritedModel
 from forms import EchoForm
+from test_project.apps.testapp import signals
 
 
 class EntryHandler(BaseHandler):
     model = TestModel
-    allowed_methods = ['GET']
+    allowed_methods = ['GET', 'PUT', 'POST']
 
     def read(self, request, pk=None):
+        signals.entry_request_started.send(sender=self, request=request)
         if pk is not None:
             return TestModel.objects.get(pk=int(pk))
         paginator = Paginator(TestModel.objects.all(), 25)
         return paginator.page(int(request.GET.get('page', 1))).object_list
+
+    def update(self, request, pk):
+        signals.entry_request_started.send(sender=self, request=request)
+
+    def create(self, request):
+        signals.entry_request_started.send(sender=self, request=request)
 
 class ExpressiveHandler(BaseHandler):
     model = ExpressiveTestModel
@@ -43,7 +51,6 @@ class ExpressiveHandler(BaseHandler):
             return rc.CREATED
         else:
             super(ExpressiveTestModel, self).create(request)
-            
             
 class AbstractHandler(BaseHandler):
     fields = ('id', 'some_other', 'some_field')

@@ -131,7 +131,6 @@ def coerce_put_post(request):
         request._load_post_and_files()
         request.method = "PUT"
         request.PUT = request.POST
-        del request._post
 
 class Mimer(object):
     TYPES = dict()
