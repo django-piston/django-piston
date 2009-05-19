@@ -140,7 +140,10 @@ class Mimer(object):
         self.request = request
         
     def is_multipart(self):
-        return 'Content-Disposition: form-data;' in self.request.raw_post_data
+        content_type = self.content_type()
+        if content_type is not None:
+            return content_type.lstrip().startswith('multipart')
+        return False
 
     def loader_for_type(self, ctype):
         """
