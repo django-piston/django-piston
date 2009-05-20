@@ -63,8 +63,13 @@ class Resource(object):
         NB: Sends a `Vary` header so we don't cache requests
         that are different (OAuth stuff in `Authorization` header.)
         """
+        rm = request.method.upper()
+
         if not self.authentication.is_authenticated(request):
-            if hasattr(self.handler, 'anonymous') and callable(self.handler.anonymous):
+            if hasattr(self.handler, 'anonymous') and \
+                callable(self.handler.anonymous) and \
+                rm in self.handler.anonymous.allowed_methods:
+
                 handler = self.handler.anonymous()
                 anonymous = True
             else:
@@ -72,9 +77,7 @@ class Resource(object):
         else:
             handler = self.handler
             anonymous = handler.is_anonymous
-        
-        rm = request.method.upper()
-        
+                
         # Django's internal mechanism doesn't pick up
         # PUT request, so we trick it a little here.
         if rm == "PUT":
