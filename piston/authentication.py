@@ -1,5 +1,5 @@
 from django.http import HttpResponse, HttpResponseRedirect
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, AnonymousUser
 from django.contrib.auth.decorators import login_required
 from django.template import loader
 from django.conf import settings
@@ -66,9 +66,9 @@ class HttpBasicAuthentication(object):
         auth = auth.strip().decode('base64')
         (username, password) = auth.split(':', 1)
         
-        request.user = self.auth_func(username, password)
+        request.user = self.auth_func(username, password) or AnonymousUser()
         
-        return not request.user is False
+        return not request.user in (False, AnonymousUser())
         
     def challenge(self):
         resp = HttpResponse("Authorization Required")
