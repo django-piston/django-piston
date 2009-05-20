@@ -1,6 +1,10 @@
 import inspect, handler
 
+from piston.handler import typemapper
+
 from django.core.urlresolvers import get_resolver, get_callable, get_script_prefix
+from django.shortcuts import render_to_response
+from django.template import RequestContext
 
 def generate_doc(handler_cls):
     """
@@ -74,12 +78,21 @@ class HandlerDocumentation(object):
             met = getattr(self.handler, method)
             stale = inspect.getmodule(met) is handler
 
-            if met and (not stale or include_default):
-                yield HandlerMethod(met, stale)
+            if not self.handler.is_anonymous:
+                if met and (not stale or include_default):
+                    yield HandlerMethod(met, stale)
+            else:
+                if not stale or met.__name__ == "read" \
+                    and 'GET' in self.allowed_methods:
+                    
+                    yield HandlerMethod(met, stale)
+        
+    def get_all_methods(self):
+        return self.get_methods(include_default=True)
         
     @property
     def is_anonymous(self):
-        return False
+        return handler.is_anonymous
 
     def get_model(self):
         return getattr(self, 'model', None)
@@ -93,13 +106,16 @@ class HandlerDocumentation(object):
     def name(self):
         return self.handler.__name__
     
+    @property
+    def allowed_methods(self):
+        return self.handler.allowed_methods
+    
     def get_resource_uri_template(self):
         """
         URI template processor.
         
         See http://bitworking.org/projects/URI-Templates/
         """
-        
         def _convert(template, params=[]):
             """URI template converter"""
             paths = template % dict([p, "{%s}" % p] for p in params)
@@ -109,6 +125,7 @@ class HandlerDocumentation(object):
             resource_uri = self.handler.resource_uri()
             
             components = [None, [], {}]
+
             for i, value in enumerate(resource_uri):
                 components[i] = value
         
@@ -134,3 +151,16 @@ class HandlerDocumentation(object):
     
     def __repr__(self):
         return u'<Documentation for "%s">' % self.name
+
+def documentation_view(request):
+    """
+    Generic documentation view. Generates documentation
+    from the handlers you've defined.
+    """
+    docs = [ ]
+
+    for handler, (model, anonymous) in typemapper.iteritems():
+        docs.append(generate_doc(handler))
+        
+    return render_to_response('documentation.html', 
+        { 'docs': docs }, RequestContext(request))
