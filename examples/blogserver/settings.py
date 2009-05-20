@@ -74,6 +74,7 @@ ROOT_URLCONF = 'blogserver.urls'
 
 TEMPLATE_DIRS = (
     os.path.join(BASE_DIR, 'templates'),
+    os.path.join(BASE_DIR, '../../piston/templates'),
 )
 
 INSTALLED_APPS = (
@@ -82,6 +83,7 @@ INSTALLED_APPS = (
     'django.contrib.sessions',
     'django.contrib.sites',
     'django.contrib.admin',
+    'django.contrib.markup',
     'blogserver.blog',
     'blogserver.api',
 )
