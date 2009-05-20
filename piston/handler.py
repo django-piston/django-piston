@@ -1,4 +1,4 @@
-from piston.utils import rc
+from utils import rc
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 
 typemapper = { }
