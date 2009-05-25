@@ -2,6 +2,7 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.contrib.auth.models import User, AnonymousUser
 from django.contrib.auth.decorators import login_required
 from django.template import loader
+from django.contrib.auth import authenticate
 from django.conf import settings
 from django.core.urlresolvers import get_callable
 
@@ -17,23 +18,6 @@ class NoAuthentication(object):
     def is_authenticated(self, request):
         return True
 
-def django_auth(username, password):
-    """
-    Basic callback for `HttpBasicAuthentication`
-    which checks the username and password up
-    against Djangos built-in authentication system.
-    
-    On success, returns the `User`, *not* boolean!
-    """
-    try:
-        user = User.objects.get(username=username)
-        if user.check_password(password):
-            return user
-        else:
-            return False
-    except User.DoesNotExist:
-        return False
-
 class HttpBasicAuthentication(object):
     """
     Basic HTTP authenticater. Synopsis:
@@ -48,8 +32,7 @@ class HttpBasicAuthentication(object):
         This will usually be a `HttpResponse` object with
         some kind of challenge headers and 401 code on it.
     """
-    def __init__(self, auth_func=django_auth, realm='API'):
-        self.auth_func = auth_func
+    def __init__(self,realm='API'):
         self.realm = realm
 
     def is_authenticated(self, request):
@@ -66,9 +49,9 @@ class HttpBasicAuthentication(object):
         auth = auth.strip().decode('base64')
         (username, password) = auth.split(':', 1)
         
-        request.user = self.auth_func(username, password) or AnonymousUser()
+        request.user = authenticate(username=username, password=password) or AnonymousUser()
         
-        return not request.user in (False, AnonymousUser())
+        return not request.user in (False, None, AnonymousUser())
         
     def challenge(self):
         resp = HttpResponse("Authorization Required")
