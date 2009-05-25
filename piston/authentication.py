@@ -32,7 +32,7 @@ class HttpBasicAuthentication(object):
         This will usually be a `HttpResponse` object with
         some kind of challenge headers and 401 code on it.
     """
-    def __init__(self,realm='API'):
+    def __init__(self, realm='API'):
         self.realm = realm
 
     def is_authenticated(self, request):
