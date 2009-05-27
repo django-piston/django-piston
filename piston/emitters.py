@@ -92,6 +92,10 @@ class Emitter(object):
             elif isinstance(thing, types.FunctionType):
                 if not inspect.getargspec(thing)[0]:
                     ret = _any(thing())
+            elif hasattr(thing, '__emittable__'):
+                f = thing.__emittable__
+                if inspect.ismethod(f) and len(inspect.getargspec(f)[0]) == 1:
+                    ret = _any(f())
             else:
                 ret = smart_unicode(thing, strings_only=True)
 
