@@ -1,6 +1,6 @@
 from __future__ import generators
 
-import types, decimal, types, re, inspect
+import decimal, re, inspect
 
 try:
     # yaml isn't standard with python.  It shouldn't be required if it
@@ -89,7 +89,7 @@ class Emitter(object):
                 ret = _model(thing, fields=fields)
             elif isinstance(thing, HttpResponse):
                 raise HttpStatusCode(thing.content, code=thing.status_code)
-            elif isinstance(thing, types.FunctionType):
+            elif inspect.isfunction(thing):
                 if not inspect.getargspec(thing)[0]:
                     ret = _any(thing())
             elif hasattr(thing, '__emittable__'):
