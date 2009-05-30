@@ -24,6 +24,10 @@ urlpatterns = patterns('',
     url(r'^abstract/(?P<id_>\d+)\.(?P<emitter_format>.+)$', abstract),
 
     url(r'^echo$', echo),
+
+    url(r'^oauth/request_token$', 'piston.authentication.oauth_request_token'),
+    url(r'^oauth/authorize$', 'piston.authentication.oauth_user_auth'),
+    url(r'^oauth/access_token$', 'piston.authentication.oauth_access_token'),
 )
 
 

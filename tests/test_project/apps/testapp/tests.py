@@ -2,12 +2,16 @@ from django.test import TestCase
 from django.contrib.auth.models import User
 from django.utils import simplejson
 
+from piston import oauth
+from piston.models import Consumer, Token
+
 try:
     import yaml
 except ImportError:
     print "Can't run YAML testsuite"
     yaml = None
 
+import urllib
 import base64
 
 from test_project.apps.testapp.models import TestModel, ExpressiveTestModel, Comment, InheritedModel
@@ -27,6 +31,70 @@ class MainTests(TestCase):
         
     def tearDown(self):
         self.user.delete()
+
+
+
+class OAuthTests(MainTests):
+    signature_method = oauth.OAuthSignatureMethod_HMAC_SHA1()
+
+    def setUp(self):
+        super(OAuthTests, self).setUp()
+
+        self.consumer = Consumer(name='Test Consumer', description='Test', status='accepted')
+        self.consumer.generate_random_codes()
+        self.consumer.save()
+
+    def tearDown(self):
+        super(OAuthTests, self).tearDown()
+        self.consumer.delete()
+
+    def test_handshake(self):
+        '''Test the OAuth handshake procedure
+        '''
+        oaconsumer = oauth.OAuthConsumer(self.consumer.key, self.consumer.secret)
+
+        # Get a request key...
+        request = oauth.OAuthRequest.from_consumer_and_token(oaconsumer,
+                http_url='http://testserver/api/oauth/request_token')
+        request.sign_request(self.signature_method, oaconsumer, None)
+
+        response = self.client.get('/api/oauth/request_token', request.parameters)
+        oatoken = oauth.OAuthToken.from_string(response.content)
+
+        token = Token.objects.get(key=oatoken.key, token_type=Token.REQUEST)
+        self.assertEqual(token.secret, oatoken.secret)
+
+        # Simulate user authentication...
+        self.failUnless(self.client.login(username='admin', password='admin'))
+        request = oauth.OAuthRequest.from_token_and_callback(token=oatoken,
+                callback='http://printer.example.com/request_token_ready',
+                http_url='http://testserver/api/oauth/authorize')
+        request.sign_request(self.signature_method, oaconsumer, oatoken)
+
+        # Place the token into the client session...
+        session = self.client.session
+        session['oauth'] = oatoken.key
+        session.save()
+        response = self.client.post('/api/oauth/authorize', {
+            'oauth_token': oatoken.key,
+            'oauth_callback': 'http://printer.example.com/request_token_ready',
+            'authorize_access': 1,
+            })
+
+        # Response should be a redirect...
+        self.assertEqual(302, response.status_code)
+        self.assertEqual('http://printer.example.com/request_token_ready?oauth_token='+oatoken.key, response['Location'])
+
+        # Obtain access token...
+        request = oauth.OAuthRequest.from_consumer_and_token(oaconsumer, token=oatoken,
+                http_url='http://testserver/api/oauth/access_token')
+        request.sign_request(self.signature_method, oaconsumer, oatoken)
+        response = self.client.get('/api/oauth/access_token', request.parameters)
+
+        oa_atoken = oauth.OAuthToken.from_string(response.content)
+        atoken = Token.objects.get(key=oa_atoken.key, token_type=Token.ACCESS)
+        self.assertEqual(atoken.secret, oa_atoken.secret)
+
  
 class MultiXMLTests(MainTests):
     def init_delegate(self):

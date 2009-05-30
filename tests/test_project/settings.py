@@ -16,5 +16,7 @@ ROOT_URLCONF = 'test_project.urls'
 
 MIDDLEWARE_CLASSES = (
     'piston.middleware.ConditionalMiddlewareCompatProxy',
+    'django.contrib.sessions.middleware.SessionMiddleware',
     'piston.middleware.CommonMiddlewareCompatProxy',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
 )
