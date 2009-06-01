@@ -126,7 +126,8 @@ class Resource(object):
                 
             result.content = format_error(msg)
         except HttpStatusCode, e:
-            result = e
+            #result = e ## why is this being passed on and not just dealt with now?
+            return e.response
         except Exception, e:
             """
             On errors (like code errors), we'd like to be able to
@@ -172,7 +173,7 @@ class Resource(object):
 
             return resp
         except HttpStatusCode, e:
-            return HttpResponse(e.msg, status=e.code)
+            return e.response
 
     @staticmethod
     def cleanup_request(request):
