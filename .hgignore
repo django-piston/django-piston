@@ -11,3 +11,4 @@ downloads
 develop-eggs
 .DS_Store
 .svn
+*.swp
