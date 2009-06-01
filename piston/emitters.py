@@ -9,6 +9,16 @@ try:
 except ImportError:
     yaml = None
 
+# Fallback since `any` isn't in Python <2.5
+try:
+    any
+except NameError:
+    def any(iterable):
+        for element in iterable:
+            if element:
+                return True
+        return False
+
 from django.db.models.query import QuerySet
 from django.db.models import Model, permalink
 from django.utils import simplejson
@@ -159,7 +169,7 @@ class Emitter(object):
                 met_fields = self.method_fields(handler, get_fields)
 
                 for f in data._meta.local_fields:
-                    if f.serialize and f.attname not in met_fields:
+                    if f.serialize and not any([ p in met_fields for p in [ f.attname, f.name ]]):
                         if not f.rel:
                             if f.attname in get_fields:
                                 ret[f.attname] = _any(v(f))
