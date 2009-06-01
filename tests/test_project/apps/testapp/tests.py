@@ -71,13 +71,19 @@ class OAuthTests(MainTests):
                 http_url='http://testserver/api/oauth/authorize')
         request.sign_request(self.signature_method, oaconsumer, oatoken)
 
-        # Place the token into the client session...
-        session = self.client.session
-        session['oauth'] = oatoken.key
-        session.save()
+        # Request the login page
+# TODO: Parse the response to make sure all the fields exist
+#        response = self.client.get('/api/oauth/authorize', {
+#            'oauth_token': oatoken.key,
+#            'oauth_callback': 'http://printer.example.com/request_token_ready',
+#            })
+
+        from piston.forms import OAuthAuthenticationForm
+        from django.conf import settings
         response = self.client.post('/api/oauth/authorize', {
             'oauth_token': oatoken.key,
             'oauth_callback': 'http://printer.example.com/request_token_ready',
+            'csrf_signature': OAuthAuthenticationForm.get_csrf_signature(settings.SECRET_KEY, oatoken.key),
             'authorize_access': 1,
             })
 
