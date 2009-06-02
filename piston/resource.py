@@ -1,6 +1,7 @@
 import sys, inspect
 
-from django.http import HttpResponse, Http404, HttpResponseNotAllowed, HttpResponseForbidden
+from django.http import (HttpResponse, Http404, HttpResponseNotAllowed,
+    HttpResponseForbidden, HttpResponseServerError)
 from django.views.debug import ExceptionReporter
 from django.views.decorators.vary import vary_on_headers
 from django.conf import settings
@@ -148,7 +149,8 @@ class Resource(object):
             if self.email_errors:
                 self.email_exception(rep)
             if self.display_errors:
-                result = format_error('\n'.join(rep.format_exception()))
+                return HttpResponseServerError(
+                    format_error('\n'.join(rep.format_exception())))
             else:
                 raise
 
