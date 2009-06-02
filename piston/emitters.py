@@ -210,11 +210,11 @@ class Emitter(object):
                     else:                    
                         maybe = getattr(data, maybe_field, None)
                         if maybe:
-                            if isinstance(maybe, (int, basestring)):
-                                ret[maybe_field] = _any(maybe)
-                            elif callable(maybe):
+                            if callable(maybe):
                                 if len(inspect.getargspec(maybe)[0]) == 1:
                                     ret[maybe_field] = _any(maybe())
+                            else:
+                                ret[maybe_field] = _any(maybe)
                         else:
                             handler_f = getattr(handler or self.handler, maybe_field, None)
 
