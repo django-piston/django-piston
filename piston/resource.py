@@ -143,12 +143,10 @@ class Resource(object):
             If `PISTON_DISPLAY_ERRORS` is not enabled, the caller will
             receive a basic "500 Internal Server Error" message.
             """
+            exc_type, exc_value, tb = sys.exc_info()
+            rep = ExceptionReporter(request, exc_type, exc_value, tb.tb_next)
             if self.email_errors:
-                exc_type, exc_value, tb = sys.exc_info()
-                rep = ExceptionReporter(request, exc_type, exc_value, tb.tb_next)
-
                 self.email_exception(rep)
-
             if self.display_errors:
                 result = format_error('\n'.join(rep.format_exception()))
             else:
@@ -156,7 +154,7 @@ class Resource(object):
 
         emitter, ct = Emitter.get(em_format)
         srl = emitter(result, typemapper, handler, handler.fields, anonymous)
-        
+
         try:
             """
             Decide whether or not we want a generator here,
