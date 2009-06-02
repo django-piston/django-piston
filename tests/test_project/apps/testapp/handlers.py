@@ -3,7 +3,7 @@ from django.core.paginator import Paginator
 from piston.handler import BaseHandler
 from piston.utils import rc, validate
 
-from models import TestModel, ExpressiveTestModel, Comment, InheritedModel
+from models import TestModel, ExpressiveTestModel, Comment, InheritedModel, PlainOldObject
 from forms import EchoForm
 from test_project.apps.testapp import signals
 
@@ -62,6 +62,13 @@ class AbstractHandler(BaseHandler):
         else:
             return super(AbstractHandler, self).read(request)
 
+class PlainOldObjectHandler(BaseHandler):
+    allowed_methods = ('GET',)
+    fields = ('type', 'field')
+    model = PlainOldObject
+    
+    def read(self, request):
+        return self.model()
 
 class EchoHandler(BaseHandler):
     allowed_methods = ('GET', )
