@@ -1,9 +1,11 @@
 from django.test import TestCase
 from django.contrib.auth.models import User
 from django.utils import simplejson
+from django.conf import settings
 
 from piston import oauth
 from piston.models import Consumer, Token
+from piston.forms import OAuthAuthenticationForm
 
 try:
     import yaml
@@ -11,8 +13,7 @@ except ImportError:
     print "Can't run YAML testsuite"
     yaml = None
 
-import urllib
-import base64
+import urllib, base64
 
 from test_project.apps.testapp.models import TestModel, ExpressiveTestModel, Comment, InheritedModel
 from test_project.apps.testapp import signals
@@ -78,8 +79,6 @@ class OAuthTests(MainTests):
 #            'oauth_callback': 'http://printer.example.com/request_token_ready',
 #            })
 
-        from piston.forms import OAuthAuthenticationForm
-        from django.conf import settings
         response = self.client.post('/api/oauth/authorize', {
             'oauth_token': oatoken.key,
             'oauth_callback': 'http://printer.example.com/request_token_ready',
