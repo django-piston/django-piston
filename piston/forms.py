@@ -1,5 +1,4 @@
-import hmac
-import base64
+import hmac, base64
 
 from django import forms
 from django.conf import settings
