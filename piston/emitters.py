@@ -9,6 +9,16 @@ try:
 except ImportError:
     yaml = None
 
+# Fallback since `any` isn't in Python <2.5
+try:
+    any
+except NameError:
+    def any(iterable):
+        for element in iterable:
+            if element:
+                return True
+        return False
+
 from django.db.models.query import QuerySet
 from django.db.models import Model, permalink
 from django.utils import simplejson
@@ -88,7 +98,7 @@ class Emitter(object):
             elif isinstance(thing, Model):
                 ret = _model(thing, fields=fields)
             elif isinstance(thing, HttpResponse):
-                raise HttpStatusCode(thing.content, code=thing.status_code)
+                raise HttpStatusCode(thing)
             elif inspect.isfunction(thing):
                 if not inspect.getargspec(thing)[0]:
                     ret = _any(thing())
@@ -163,7 +173,7 @@ class Emitter(object):
                 met_fields = self.method_fields(handler, get_fields)
 
                 for f in data._meta.local_fields:
-                    if f.serialize and f.attname not in met_fields:
+                    if f.serialize and not any([ p in met_fields for p in [ f.attname, f.name ]]):
                         if not f.rel:
                             if f.attname in get_fields:
                                 ret[f.attname] = _any(v(f))
@@ -204,11 +214,11 @@ class Emitter(object):
                     else:                    
                         maybe = getattr(data, maybe_field, None)
                         if maybe:
-                            if isinstance(maybe, (int, basestring)):
-                                ret[maybe_field] = _any(maybe)
-                            elif callable(maybe):
+                            if callable(maybe):
                                 if len(inspect.getargspec(maybe)[0]) == 1:
                                     ret[maybe_field] = _any(maybe())
+                            else:
+                                ret[maybe_field] = _any(maybe)
                         else:
                             handler_f = getattr(handler or self.handler, maybe_field, None)
 
@@ -354,7 +364,7 @@ class JSONEmitter(Emitter):
     """
     def render(self, request):
         cb = request.GET.get('callback')
-        seria = simplejson.dumps(self.construct(), cls=DateTimeAwareJSONEncoder)
+        seria = simplejson.dumps(self.construct(), cls=DateTimeAwareJSONEncoder, ensure_ascii=False, indent=4)
 
         # Callback
         if cb:
