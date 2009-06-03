@@ -9,7 +9,6 @@ from django.core.urlresolvers import get_callable
 from django.core.exceptions import ImproperlyConfigured
 from django.shortcuts import render_to_response
 from django.template import RequestContext
-from django.utils.importlib import import_module
 
 from piston import forms
 
@@ -75,7 +74,7 @@ def load_data_store():
     module, attr = path[:i], path[i+1:]
 
     try:
-        mod = import_module(module)
+        mod = __import__(module, {}, {}, attr)
     except ImportError, e:
         raise ImproperlyConfigured, 'Error importing OAuth data store %s: "%s"' % (module, e)
 
