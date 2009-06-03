@@ -2,7 +2,7 @@ from django.conf.urls.defaults import *
 from piston.resource import Resource
 from piston.authentication import HttpBasicAuthentication
 
-from test_project.apps.testapp.handlers import EntryHandler, ExpressiveHandler, AbstractHandler, EchoHandler
+from test_project.apps.testapp.handlers import EntryHandler, ExpressiveHandler, AbstractHandler, EchoHandler, PlainOldObjectHandler
 
 auth = HttpBasicAuthentication(realm='TestApplication')
 
@@ -10,6 +10,7 @@ entries = Resource(handler=EntryHandler, authentication=auth)
 expressive = Resource(handler=ExpressiveHandler, authentication=auth)
 abstract = Resource(handler=AbstractHandler, authentication=auth)
 echo = Resource(handler=EchoHandler)
+popo = Resource(handler=PlainOldObjectHandler)
 
 
 urlpatterns = patterns('',
@@ -25,9 +26,12 @@ urlpatterns = patterns('',
 
     url(r'^echo$', echo),
 
+    # oauth entrypoints
     url(r'^oauth/request_token$', 'piston.authentication.oauth_request_token'),
     url(r'^oauth/authorize$', 'piston.authentication.oauth_user_auth'),
     url(r'^oauth/access_token$', 'piston.authentication.oauth_access_token'),
+    
+    url(r'^popo$', popo),
 )
 
 
