@@ -1,3 +1,4 @@
+import oauth
 from django.http import HttpResponse, HttpResponseRedirect
 from django.contrib.auth.models import User, AnonymousUser
 from django.contrib.auth.decorators import login_required
@@ -10,7 +11,6 @@ from django.shortcuts import render_to_response
 from django.template import RequestContext
 from django.utils.importlib import import_module
 
-import oauth
 from piston import forms
 
 class NoAuthentication(object):
@@ -65,8 +65,6 @@ class HttpBasicAuthentication(object):
         resp.status_code = 401
         return resp
 
-DataStore = None
-
 def load_data_store():
     '''Load data store for OAuth Consumers, Tokens, Nonces and Resources
     '''
@@ -75,6 +73,7 @@ def load_data_store():
     # stolen from django.contrib.auth.load_backend
     i = path.rfind('.')
     module, attr = path[:i], path[i+1:]
+
     try:
         mod = import_module(module)
     except ImportError, e:
@@ -87,6 +86,9 @@ def load_data_store():
 
     return cls
 
+# Set the datastore here.
+oauth_datastore = load_data_store()
+
 def initialize_server_request(request):
     """
     Shortcut for initialization.
@@ -97,11 +99,7 @@ def initialize_server_request(request):
         query_string=request.environ.get('QUERY_STRING', ''))
         
     if oauth_request:
-        global DataStore
-        if DataStore is None:
-            DataStore = load_data_store()
-
-        oauth_server = oauth.OAuthServer(DataStore(oauth_request))
+        oauth_server = oauth.OAuthServer(oauth_datastore(oauth_request))
         oauth_server.add_signature_method(oauth.OAuthSignatureMethod_PLAINTEXT())
         oauth_server.add_signature_method(oauth.OAuthSignatureMethod_HMAC_SHA1())
     else:
@@ -143,6 +141,7 @@ def oauth_auth_view(request, token, callback, params):
         'oauth_token': token.key,
         'oauth_callback': callback,
         })
+
     return render_to_response('piston/authorize_token.html',
             { 'form': form }, RequestContext(request))
 

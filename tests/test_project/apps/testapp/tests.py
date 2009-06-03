@@ -326,3 +326,10 @@ class ValidationTest(MainTests):
         resp = self.client.get('/api/echo', data)
         self.assertEquals(resp.status_code, 200)
         self.assertEquals(data, simplejson.loads(resp.content))
+
+class PlainOldObject(MainTests):
+    def test_plain_object_serialization(self):
+        resp = self.client.get('/api/popo')
+        self.assertEquals(resp.status_code, 200)
+        self.assertEquals({'type': 'plain', 'field': 'a field'}, simplejson.loads(resp.content))
+        
