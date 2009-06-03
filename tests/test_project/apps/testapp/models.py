@@ -24,3 +24,8 @@ class InheritedModel(AbstractModel):
     
     class Meta:
         db_table = 'testing_abstracts'
+
+class PlainOldObject(object):
+    def __emittable__(self):
+        return {'type': 'plain',
+                'field': 'a field'}
