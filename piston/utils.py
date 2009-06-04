@@ -168,7 +168,20 @@ class Mimer(object):
                 return loadee
 
     def content_type(self):
-        return self.request.META.get('CONTENT_TYPE', None)
+        """
+        Returns the content type of the request in all cases where it is
+        different than a submitted form - application/x-www-form-urlencoded
+        """
+
+        type_formencoded = "application/x-www-form-urlencoded"
+
+        ctype = self.request.META.get('CONTENT_TYPE', type_formencoded)
+        
+        if ctype == type_formencoded:
+            return None
+        
+        return ctype
+        
 
     def translate(self):
         """
@@ -179,9 +192,9 @@ class Mimer(object):
         `request.data` instead, and the handler will have to read from
         there.
         
-        It will also set `request.mimetype` so the handler has an easy
-        way to tell what's going on. `request.mimetype` will always be
-        None for multipart form data (what your browser sends.)
+        It will also set `request.content_type` so the handler has an easy
+        way to tell what's going on. `request.content_type` will always be
+        None for form-encoded and/or multipart form data (what your browser sends.)
         """    
         ctype = self.content_type()
         self.request.content_type = ctype
