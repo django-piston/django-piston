@@ -66,6 +66,11 @@ class Resource(object):
         """
         rm = request.method.upper()
 
+        # Django's internal mechanism doesn't pick up
+        # PUT request, so we trick it a little here.
+        if rm == "PUT":
+            coerce_put_post(request)
+
         if not self.authentication.is_authenticated(request):
             if hasattr(self.handler, 'anonymous') and \
                 callable(self.handler.anonymous) and \
@@ -78,11 +83,6 @@ class Resource(object):
         else:
             handler = self.handler
             anonymous = handler.is_anonymous
-                
-        # Django's internal mechanism doesn't pick up
-        # PUT request, so we trick it a little here.
-        if rm == "PUT":
-            coerce_put_post(request)
         
         # Translate nested datastructs into `request.data` here.
         translate_mime(request)
