@@ -12,7 +12,7 @@ from handler import typemapper
 from doc import HandlerMethod
 from authentication import NoAuthentication
 from utils import coerce_put_post, FormValidationError, HttpStatusCode
-from utils import rc, format_error, translate_mime
+from utils import rc, format_error, translate_mime, MimerDataException
 
 class Resource(object):
     """
@@ -85,7 +85,11 @@ class Resource(object):
             anonymous = handler.is_anonymous
         
         # Translate nested datastructs into `request.data` here.
-        translate_mime(request)
+        if rm in ('POST', 'PUT'):
+            try:
+                translate_mime(request)
+            except MimerDataException:
+                return rc.BAD_REQUEST
         
         if not rm in handler.allowed_methods:
             return HttpResponseNotAllowed(handler.allowed_methods)

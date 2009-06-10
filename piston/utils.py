@@ -1,4 +1,5 @@
-from django.http import HttpResponseNotAllowed, HttpResponseForbidden, HttpResponse
+from django.http import (HttpResponseNotAllowed, HttpResponseForbidden,
+    HttpResponse, HttpResponseBadRequest)
 from django.core.urlresolvers import reverse
 from django.core.cache import cache
 from django import get_version as django_version
@@ -146,6 +147,11 @@ def coerce_put_post(request):
             
         request.PUT = request.POST
 
+
+class MimerDataException(Exception):
+    """Raised if the content_type and data don't match"""
+
+
 class Mimer(object):
     TYPES = dict()
     
@@ -208,11 +214,9 @@ class Mimer(object):
                 # Reset both POST and PUT from request, as its
                 # misleading having their presence around.
                 self.request.POST = self.request.PUT = dict()
-            except TypeError:
-                return rc.BAD_REQUEST # TODO: Handle this in super
-            except Exception, e:
-                raise
-                
+            except (TypeError, ValueError):
+                raise MimerDataException
+
         return self.request
                 
     @classmethod

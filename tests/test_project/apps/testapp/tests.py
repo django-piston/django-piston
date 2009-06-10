@@ -227,7 +227,14 @@ class IncomingExpressiveTests(MainTests):
             HTTP_AUTHORIZATION=self.auth_string).content
             
         self.assertEquals(result, expected)
-        
+
+    def test_incoming_invalid_json(self):
+        resp = self.client.post('/api/expressive.json',
+            'foo',
+            HTTP_AUTHORIZATION=self.auth_string,
+            content_type='application/json')
+        self.assertEquals(resp.status_code, 400)
+
     def test_incoming_yaml(self):
         if not yaml:
             return
@@ -266,6 +273,13 @@ class IncomingExpressiveTests(MainTests):
 """
         self.assertEquals(self.client.get('/api/expressive.yaml', 
             HTTP_AUTHORIZATION=self.auth_string).content, expected)
+
+    def test_incoming_invalid_yaml(self):
+        resp = self.client.post('/api/expressive.yaml',
+            '  8**sad asj lja foo',
+            HTTP_AUTHORIZATION=self.auth_string,
+            content_type='application/yaml')
+        self.assertEquals(resp.status_code, 400)
 
 class Issue36RegressionTests(MainTests):
     """
