@@ -41,8 +41,8 @@ class OAuthTests(MainTests):
     def setUp(self):
         super(OAuthTests, self).setUp()
 
-        self.consumer = Consumer(name='Test Consumer', description='Test', status='accepted')
-        self.consumer.generate_random_codes()
+        self.consumer = Consumer.objects.create_consumer('Test Consumer')
+        self.consumer.status = 'accepted'
         self.consumer.save()
 
     def tearDown(self):

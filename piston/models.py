@@ -6,10 +6,7 @@ from django.conf import settings
 from django.core.mail import send_mail, mail_admins
 from django.template import loader
 
-from managers import TokenManager, ConsumerManager, ResourceManager
-
-KEY_SIZE = 18
-SECRET_SIZE = 32
+from managers import TokenManager, ConsumerManager, ResourceManager, KEY_SIZE, SECRET_SIZE
 
 CONSUMER_STATES = (
     ('pending', 'Pending approval'),
@@ -54,20 +51,6 @@ class Consumer(models.Model):
     def __unicode__(self):
         return u"Consumer %s with key %s" % (self.name, self.key)
 
-    def generate_random_codes(self):
-        key = User.objects.make_random_password(length=KEY_SIZE)
-
-        secret = User.objects.make_random_password(length=SECRET_SIZE)
-
-        while Consumer.objects.filter(key__exact=key, secret__exact=secret).count():
-            secret = User.objects.make_random_password(length=SECRET_SIZE)
-
-        self.key = key
-        self.secret = secret
-        self.save()
-
-    # -- 
-    
     def save(self, **kwargs):
         super(Consumer, self).save(**kwargs)
         
@@ -132,15 +115,4 @@ class Token(models.Model):
             del token_dict['oauth_token_secret']
         return urllib.urlencode(token_dict)
 
-    def generate_random_codes(self):
-        key = User.objects.make_random_password(length=KEY_SIZE)
-        secret = User.objects.make_random_password(length=SECRET_SIZE)
-
-        while Token.objects.filter(key__exact=key, secret__exact=secret).count():
-            secret = User.objects.make_random_password(length=SECRET_SIZE)
-
-        self.key = key
-        self.secret = secret
-        self.save()
-        
 admin.site.register(Token)
