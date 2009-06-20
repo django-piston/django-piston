@@ -88,8 +88,28 @@ class BaseHandler(object):
             return rc.DUPLICATE_ENTRY
     
     def update(self, request, *args, **kwargs):
-        # TODO: This doesn't work automatically yet.
-        return rc.NOT_IMPLEMENTED
+        if not self.has_model():
+            return rc.NOT_IMPLEMENTED
+
+        pkfield = self.model._meta.pk.name
+
+        if pkfield not in kwargs:
+            # No pk was specified
+            return rc.BAD_REQUEST
+
+        try:
+            inst = self.model.objects.get(pk=kwargs.get(pkfield))
+        except ObjectDoesNotExist:
+            return rc.NOT_FOUND
+        except MultipleObjectsReturned: # should never happen, since we're using a PK
+            return rc.BAD_REQUEST
+
+        attrs = self.flatten_dict(request.POST)
+        for k,v in attrs.iteritems():
+            setattr( inst, k, v )
+
+        inst.save()
+        return rc.ALL_OK
     
     def delete(self, request, *args, **kwargs):
         if not self.has_model():
