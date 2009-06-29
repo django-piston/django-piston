@@ -100,7 +100,31 @@ class OAuthTests(MainTests):
         atoken = Token.objects.get(key=oa_atoken.key, token_type=Token.ACCESS)
         self.assertEqual(atoken.secret, oa_atoken.secret)
 
- 
+
+class BasicAuthTest(MainTests):
+
+    def test_invalid_auth_header(self):
+        response = self.client.get('/api/entries/')
+        self.assertEquals(response.status_code, 401)
+
+        # no space
+        bad_auth_string = 'Basic%s' % base64.encodestring('admin:admin').rstrip()
+        response = self.client.get('/api/entries/',
+            HTTP_AUTHORIZATION=bad_auth_string)
+        self.assertEquals(response.status_code, 401)
+
+        # no colon
+        bad_auth_string = 'Basic %s' % base64.encodestring('adminadmin').rstrip()
+        response = self.client.get('/api/entries/',
+            HTTP_AUTHORIZATION=bad_auth_string)
+        self.assertEquals(response.status_code, 401)
+
+        # non base64 data
+        bad_auth_string = 'Basic FOOBARQ!'
+        response = self.client.get('/api/entries/',
+            HTTP_AUTHORIZATION=bad_auth_string)
+        self.assertEquals(response.status_code, 401)
+
 class MultiXMLTests(MainTests):
     def init_delegate(self):
         self.t1_data = TestModel()
@@ -346,4 +370,3 @@ class PlainOldObject(MainTests):
         resp = self.client.get('/api/popo')
         self.assertEquals(resp.status_code, 200)
         self.assertEquals({'type': 'plain', 'field': 'a field'}, simplejson.loads(resp.content))
-        
