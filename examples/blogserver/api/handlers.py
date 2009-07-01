@@ -23,7 +23,7 @@ class BlogpostHandler(BaseHandler):
     fields = ('title', 'content', ('author', ('username',)), 
               'created_on', 'content_length')
     
-    def read(self, title=None):
+    def read(self, request, title=None):
         """
         Returns a blogpost, if `title` is given,
         otherwise all the posts.
