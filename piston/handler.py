@@ -37,7 +37,16 @@ class BaseHandler(object):
         return dict([ (str(k), dct.get(k)) for k in dct.keys() ])
     
     def has_model(self):
-        return hasattr(self, 'model')
+        return hasattr(self, 'model') or hasattr(self, 'queryset')
+
+    def get_queryset(self, request):
+        try:
+            if callable(self.queryset):
+                return self.queryset(request)
+            else:
+                return self.queryset
+        except AttributeError:
+            return self.model.objects.all()
     
     def value_from_tuple(tu, name):
         for int_, n in tu:
@@ -63,13 +72,13 @@ class BaseHandler(object):
 
         if pkfield in kwargs:
             try:
-                return self.model.objects.get(pk=kwargs.get(pkfield))
+                return self.get_queryset(request).get(pk=kwargs.get(pkfield))
             except ObjectDoesNotExist:
                 return rc.NOT_FOUND
             except MultipleObjectsReturned: # should never happen, since we're using a PK
                 return rc.BAD_REQUEST
         else:
-            return self.model.objects.filter(*args, **kwargs)
+            return self.get_queryset(request).filter(*args, **kwargs)
     
     def create(self, request, *args, **kwargs):
         if not self.has_model():
@@ -78,7 +87,7 @@ class BaseHandler(object):
         attrs = self.flatten_dict(request.POST)
         
         try:
-            inst = self.model.objects.get(**attrs)
+            inst = self.get_queryset(request).get(**attrs)
             return rc.DUPLICATE_ENTRY
         except self.model.DoesNotExist:
             inst = self.model(**attrs)
@@ -98,7 +107,7 @@ class BaseHandler(object):
             return rc.BAD_REQUEST
 
         try:
-            inst = self.model.objects.get(pk=kwargs.get(pkfield))
+            inst = self.get_queryset(request).get(pk=kwargs.get(pkfield))
         except ObjectDoesNotExist:
             return rc.NOT_FOUND
         except MultipleObjectsReturned: # should never happen, since we're using a PK
@@ -116,7 +125,7 @@ class BaseHandler(object):
             raise NotImplementedError
 
         try:
-            inst = self.model.objects.get(*args, **kwargs)
+            inst = self.get_queryset(request).get(*args, **kwargs)
 
             inst.delete()
 
