@@ -6,6 +6,7 @@ from django.views.debug import ExceptionReporter
 from django.views.decorators.vary import vary_on_headers
 from django.conf import settings
 from django.core.mail import send_mail, EmailMessage
+from django.db.models.query import QuerySet
 
 from emitters import Emitter
 from handler import typemapper
@@ -159,7 +160,12 @@ class Resource(object):
                 raise
 
         emitter, ct = Emitter.get(em_format)
-        srl = emitter(result, typemapper, handler, handler.fields, anonymous)
+        fields = handler.fields
+        if hasattr(handler, 'list_fields') and (
+                isinstance(result, list) or isinstance(result, QuerySet)):
+            fields = handler.list_fields
+
+        srl = emitter(result, typemapper, handler, fields, anonymous)
 
         try:
             """
