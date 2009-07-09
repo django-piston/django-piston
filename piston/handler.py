@@ -39,14 +39,8 @@ class BaseHandler(object):
     def has_model(self):
         return hasattr(self, 'model') or hasattr(self, 'queryset')
 
-    def get_queryset(self, request):
-        try:
-            if callable(self.queryset):
-                return self.queryset(request)
-            else:
-                return self.queryset
-        except AttributeError:
-            return self.model.objects.all()
+    def queryset(self, request):
+        return self.model.objects.all()
     
     def value_from_tuple(tu, name):
         for int_, n in tu:
@@ -72,13 +66,13 @@ class BaseHandler(object):
 
         if pkfield in kwargs:
             try:
-                return self.get_queryset(request).get(pk=kwargs.get(pkfield))
+                return self.queryset(request).get(pk=kwargs.get(pkfield))
             except ObjectDoesNotExist:
                 return rc.NOT_FOUND
             except MultipleObjectsReturned: # should never happen, since we're using a PK
                 return rc.BAD_REQUEST
         else:
-            return self.get_queryset(request).filter(*args, **kwargs)
+            return self.queryset(request).filter(*args, **kwargs)
     
     def create(self, request, *args, **kwargs):
         if not self.has_model():
@@ -87,7 +81,7 @@ class BaseHandler(object):
         attrs = self.flatten_dict(request.POST)
         
         try:
-            inst = self.get_queryset(request).get(**attrs)
+            inst = self.queryset(request).get(**attrs)
             return rc.DUPLICATE_ENTRY
         except self.model.DoesNotExist:
             inst = self.model(**attrs)
@@ -107,7 +101,7 @@ class BaseHandler(object):
             return rc.BAD_REQUEST
 
         try:
-            inst = self.get_queryset(request).get(pk=kwargs.get(pkfield))
+            inst = self.queryset(request).get(pk=kwargs.get(pkfield))
         except ObjectDoesNotExist:
             return rc.NOT_FOUND
         except MultipleObjectsReturned: # should never happen, since we're using a PK
@@ -125,7 +119,7 @@ class BaseHandler(object):
             raise NotImplementedError
 
         try:
-            inst = self.get_queryset(request).get(*args, **kwargs)
+            inst = self.queryset(request).get(*args, **kwargs)
 
             inst.delete()
 
