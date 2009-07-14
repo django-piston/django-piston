@@ -161,8 +161,10 @@ class Mimer(object):
         
     def is_multipart(self):
         content_type = self.content_type()
+
         if content_type is not None:
             return content_type.lstrip().startswith('multipart')
+
         return False
 
     def loader_for_type(self, ctype):
@@ -171,8 +173,9 @@ class Mimer(object):
         for a certain mimetype.
         """
         for loadee, mimes in Mimer.TYPES.iteritems():
-            if ctype in mimes:
-                return loadee
+            for mime in mimes:
+                if ctype.startswith(mime):
+                    return loadee
 
     def content_type(self):
         """
@@ -183,7 +186,7 @@ class Mimer(object):
 
         ctype = self.request.META.get('CONTENT_TYPE', type_formencoded)
         
-        if ctype == type_formencoded:
+        if ctype.startswith(type_formencoded):
             return None
         
         return ctype
