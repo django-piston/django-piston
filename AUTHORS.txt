@@ -15,3 +15,4 @@ Michael Richardson for contributing an improvement to form validation handling
 Brian McMurray for contributing a patch for #41
 James Emerton for making the OAuth parts more usable/friendly
 Anton Tsigularov for providing a patch for incorrect multipart detection
+Remco Wendt for fixing up the example blog server to conform with 0.2.2, et. al
