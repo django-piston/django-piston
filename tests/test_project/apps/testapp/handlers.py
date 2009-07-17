@@ -3,7 +3,7 @@ from django.core.paginator import Paginator
 from piston.handler import BaseHandler
 from piston.utils import rc, validate
 
-from models import TestModel, ExpressiveTestModel, Comment, InheritedModel, PlainOldObject
+from models import TestModel, ExpressiveTestModel, Comment, InheritedModel, PlainOldObject, ListFieldsModel
 from forms import EchoForm
 from test_project.apps.testapp import signals
 
@@ -76,3 +76,9 @@ class EchoHandler(BaseHandler):
     @validate(EchoForm, 'GET')
     def read(self, request):
         return {'msg': request.GET['msg']}
+
+class ListFieldsHandler(BaseHandler):
+    model = ListFieldsModel
+    fields = ('id','kind','variety','color')
+    list_fields = ('id','variety')
+

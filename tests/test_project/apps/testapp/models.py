@@ -29,3 +29,9 @@ class PlainOldObject(object):
     def __emittable__(self):
         return {'type': 'plain',
                 'field': 'a field'}
+
+
+class ListFieldsModel(models.Model):
+    kind = models.CharField(max_length=15)
+    variety = models.CharField(max_length=15)
+    color = models.CharField(max_length=15)

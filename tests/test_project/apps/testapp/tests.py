@@ -15,7 +15,7 @@ except ImportError:
 
 import urllib, base64
 
-from test_project.apps.testapp.models import TestModel, ExpressiveTestModel, Comment, InheritedModel
+from test_project.apps.testapp.models import TestModel, ExpressiveTestModel, Comment, InheritedModel, ListFieldsModel
 from test_project.apps.testapp import signals
 
 class MainTests(TestCase):
@@ -370,4 +370,43 @@ class PlainOldObject(MainTests):
         resp = self.client.get('/api/popo')
         self.assertEquals(resp.status_code, 200)
         self.assertEquals({'type': 'plain', 'field': 'a field'}, simplejson.loads(resp.content))
+        
+
+
+class ListFieldsTest(MainTests):
+    def init_delegate(self):
+        ListFieldsModel(kind='fruit', variety='apple', color='green').save()
+        ListFieldsModel(kind='vegetable', variety='carrot', color='orange').save()
+        ListFieldsModel(kind='animal', variety='dog', color='brown').save()
+
+    def test_single_item(self):
+        expect = '''{
+    "color": "green", 
+    "kind": "fruit", 
+    "id": 1, 
+    "variety": "apple"
+}'''
+        resp = self.client.get('/api/list_fields/1')
+        self.assertEquals(resp.status_code, 200)
+        self.assertEquals(resp.content, expect)
+
+
+    def test_multiple_items(self):
+        expect = '''[
+    {
+        "id": 1, 
+        "variety": "apple"
+    }, 
+    {
+        "id": 2, 
+        "variety": "carrot"
+    }, 
+    {
+        "id": 3, 
+        "variety": "dog"
+    }
+]'''
+        resp = self.client.get('/api/list_fields')
+        self.assertEquals(resp.status_code, 200)
+        self.assertEquals(resp.content, expect)
         
