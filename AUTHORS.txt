@@ -16,3 +16,4 @@ Brian McMurray for contributing a patch for #41
 James Emerton for making the OAuth parts more usable/friendly
 Anton Tsigularov for providing a patch for incorrect multipart detection
 Remco Wendt for fixing up the example blog server to conform with 0.2.2, et. al
+Benoit Garret for providing a fix for oauth headers, issue #56
