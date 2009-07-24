@@ -1,6 +1,7 @@
 from __future__ import generators
 
 import decimal, re, inspect
+import copy
 
 try:
     # yaml isn't standard with python.  It shouldn't be required if it
@@ -169,9 +170,14 @@ class Emitter(object):
                                     
                 else:
                     get_fields = set(fields)
+                
+                get_fields_copy = copy.deepcopy(get_fields)
 
-                met_fields = self.method_fields(handler, get_fields)
+                for reserved_field in ['read','update','delete','create']:
+                    get_fields_copy.discard(reserved_field)
 
+                met_fields = self.method_fields(handler, get_fields_copy)
+                
                 for f in data._meta.local_fields:
                     if f.serialize and not any([ p in met_fields for p in [ f.attname, f.name ]]):
                         if not f.rel:
@@ -191,7 +197,7 @@ class Emitter(object):
                 
                 # try to get the remainder of fields
                 for maybe_field in get_fields:
-                    
+                    print maybe_field, type(maybe_field)
                     if isinstance(maybe_field, (list, tuple)):
                         model, fields = maybe_field
                         inst = getattr(data, model, None)
