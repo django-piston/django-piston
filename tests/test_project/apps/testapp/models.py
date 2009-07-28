@@ -32,4 +32,5 @@ class PlainOldObject(object):
 
 class Issue58Model(models.Model):
     read = models.BooleanField(default=False)
-    create = models.CharField(max_length=1, blank=True, null=True)
+    model = models.CharField(max_length=1, blank=True, null=True)
+    
