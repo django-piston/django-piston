@@ -378,22 +378,22 @@ class Issue58ModelTests(MainTests):
     it make piston crash with a `TypeError`
     """
     def init_delegate(self):
-        m1 = Issue58Model(read=True,create='t') 
+        m1 = Issue58Model(read=True,model='t') 
         m1.save()
-        m2 = Issue58Model(read=False,create='f')
+        m2 = Issue58Model(read=False,model='f')
         m2.save()
 
     def test_incoming_json(self):
-        outgoing = simplejson.dumps({ 'read': True, 'create': 'T'})
+        outgoing = simplejson.dumps({ 'read': True, 'model': 'T'})
 
         expected = """[
     {
         "read": true, 
-        "create": "t"
+        "model": "t"
     }, 
     {
         "read": false, 
-        "create": "f"
+        "model": "f"
     }
 ]"""
 
@@ -405,5 +405,5 @@ class Issue58ModelTests(MainTests):
         # test POST
         resp = self.client.post('/api/issue58.json', outgoing, content_type='application/json',
                                 HTTP_AUTHORIZATION=self.auth_string)
-            
+        print resp.__dict__
         self.assertEquals(resp.status_code, 201)

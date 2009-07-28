@@ -86,7 +86,7 @@ class Issue58Handler(BaseHandler):
     def create(self, request):
         if request.content_type:
             data = request.data
-            em = self.model(read=data['read'], create=data['create'])
+            em = self.model(read=data['read'], model=data['model'])
             em.save()
             return rc.CREATED
         else:

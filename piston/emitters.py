@@ -69,7 +69,7 @@ class Emitter(object):
         ret = dict()
             
         for field in fields:
-            if field in has:
+            if field in has and callable(field):
                 ret[field] = getattr(data, field)
         
         return ret
@@ -170,13 +170,8 @@ class Emitter(object):
                                     
                 else:
                     get_fields = set(fields)
-                
-                get_fields_copy = copy.deepcopy(get_fields)
 
-                for reserved_field in ['read','update','delete','create']:
-                    get_fields_copy.discard(reserved_field)
-
-                met_fields = self.method_fields(handler, get_fields_copy)
+                met_fields = self.method_fields(handler, get_fields)
                 
                 for f in data._meta.local_fields:
                     if f.serialize and not any([ p in met_fields for p in [ f.attname, f.name ]]):
