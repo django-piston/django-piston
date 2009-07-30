@@ -405,5 +405,4 @@ class Issue58ModelTests(MainTests):
         # test POST
         resp = self.client.post('/api/issue58.json', outgoing, content_type='application/json',
                                 HTTP_AUTHORIZATION=self.auth_string)
-        print resp.__dict__
         self.assertEquals(resp.status_code, 201)
