@@ -5,7 +5,7 @@ from django import get_version as django_version
 from django.core.mail import send_mail, mail_admins
 from django.conf import settings
 from django.utils.translation import ugettext as _
-from django.template import loader
+from django.template import loader, TemplateDoesNotExist
 from django.contrib.sites.models import Site
 from decorator import decorator
 
@@ -284,8 +284,15 @@ def send_consumer_mail(consumer):
 
     template = "piston/mails/consumer_%s.txt" % consumer.status    
     
-    body = loader.render_to_string(template, 
-        { 'consumer' : consumer, 'user' : consumer.user })
+    try:
+        body = loader.render_to_string(template, 
+            { 'consumer' : consumer, 'user' : consumer.user })
+    except TemplateDoesNotExist:
+        """ 
+        They haven't set up the templates, which means they might not want
+        these emails sent.
+        """
+        return 
 
     try:
         sender = settings.PISTON_FROM_EMAIL
@@ -294,7 +301,7 @@ def send_consumer_mail(consumer):
 
     send_mail(_(subject), body, sender, [consumer.user.email], fail_silently=True)
 
-    if consumer.status == 'pending':
+    if consumer.status == 'pending' and len(settings.ADMINS):
         mail_admins(_(subject), body, fail_silently=True)
 
     if settings.DEBUG:
