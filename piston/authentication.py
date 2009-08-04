@@ -235,6 +235,7 @@ class OAuthAuthentication(object):
 
             if consumer and token:
                 request.user = token.user
+                request.consumer = consumer
                 request.throttle_extra = token.consumer.id
                 return True
             
