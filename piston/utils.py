@@ -2,6 +2,11 @@ from django.http import HttpResponseNotAllowed, HttpResponseForbidden, HttpRespo
 from django.core.urlresolvers import reverse
 from django.core.cache import cache
 from django import get_version as django_version
+from django.core.mail import send_mail, mail_admins
+from django.conf import settings
+from django.utils.translation import ugettext as _
+from django.template import loader
+from django.contrib.sites.models import Site
 from decorator import decorator
 
 from datetime import datetime, timedelta
@@ -260,3 +265,40 @@ def require_mime(*mimes):
 
 require_extended = require_mime('json', 'yaml', 'xml', 'pickle')
     
+def send_consumer_mail(consumer):
+    """
+    Send a consumer an email depending on what their status is.
+    """
+    try:
+        subject = settings.PISTON_OAUTH_EMAIL_SUBJECTS[consumer.status]
+    except AttributeError:
+        subject = "Your API Consumer for %s " % Site.objects.get_current().name
+        if consumer.status == "accepted":
+            subject += "was accepted!"
+        elif consumer.status == "canceled":
+            subject += "has been canceled."
+        elif consumer.status == "rejected":
+            subject += "has been rejected."
+        else: 
+            subject += "is awaiting approval."
+
+    template = "piston/mails/consumer_%s.txt" % consumer.status    
+    
+    body = loader.render_to_string(template, 
+        { 'consumer' : consumer, 'user' : consumer.user })
+
+    try:
+        sender = settings.PISTON_FROM_EMAIL
+    except AttributeError:
+        sender = settings.DEFAULT_FROM_EMAIL
+
+    send_mail(_(subject), body, sender, [consumer.user.email], fail_silently=True)
+
+    if consumer.status == 'pending':
+        mail_admins(_(subject), body, fail_silently=True)
+
+    if settings.DEBUG:
+        print "Mail being sent, to=%s" % consumer.user.email
+        print "Subject: %s" % _(subject)
+        print body
+
