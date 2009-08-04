@@ -1,4 +1,4 @@
-import urllib
+import urllib, time
 
 # Django imports
 from django.db.models.signals import post_save, post_delete
@@ -78,7 +78,7 @@ class Token(models.Model):
     key = models.CharField(max_length=KEY_SIZE)
     secret = models.CharField(max_length=SECRET_SIZE)
     token_type = models.IntegerField(choices=TOKEN_TYPES)
-    timestamp = models.IntegerField()
+    timestamp = models.IntegerField(default=long(time.time()))
     is_approved = models.BooleanField(default=False)
     
     user = models.ForeignKey(User, null=True, blank=True, related_name='tokens')
