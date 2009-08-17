@@ -3,10 +3,9 @@ from django.core.paginator import Paginator
 from piston.handler import BaseHandler
 from piston.utils import rc, validate
 
-from models import TestModel, ExpressiveTestModel, Comment, InheritedModel, PlainOldObject, ListFieldsModel
+from models import TestModel, ExpressiveTestModel, Comment, InheritedModel, PlainOldObject, Issue58Model, ListFieldsModel
 from forms import EchoForm
 from test_project.apps.testapp import signals
-
 
 class EntryHandler(BaseHandler):
     model = TestModel
@@ -82,3 +81,17 @@ class ListFieldsHandler(BaseHandler):
     fields = ('id','kind','variety','color')
     list_fields = ('id','variety')
 
+class Issue58Handler(BaseHandler):
+    model = Issue58Model
+
+    def read(self, request):
+        return Issue58Model.objects.all()
+                
+    def create(self, request):
+        if request.content_type:
+            data = request.data
+            em = self.model(read=data['read'], model=data['model'])
+            em.save()
+            return rc.CREATED
+        else:
+            super(Issue58Model, self).create(request)

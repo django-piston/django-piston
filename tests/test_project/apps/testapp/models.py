@@ -30,8 +30,11 @@ class PlainOldObject(object):
         return {'type': 'plain',
                 'field': 'a field'}
 
-
 class ListFieldsModel(models.Model):
     kind = models.CharField(max_length=15)
     variety = models.CharField(max_length=15)
     color = models.CharField(max_length=15)
+
+class Issue58Model(models.Model):
+    read = models.BooleanField(default=False)
+    model = models.CharField(max_length=1, blank=True, null=True)
