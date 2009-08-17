@@ -15,7 +15,7 @@ except ImportError:
 
 import urllib, base64
 
-from test_project.apps.testapp.models import TestModel, ExpressiveTestModel, Comment, InheritedModel
+from test_project.apps.testapp.models import TestModel, ExpressiveTestModel, Comment, InheritedModel, Issue58Model
 from test_project.apps.testapp import signals
 
 class MainTests(TestCase):
@@ -100,7 +100,31 @@ class OAuthTests(MainTests):
         atoken = Token.objects.get(key=oa_atoken.key, token_type=Token.ACCESS)
         self.assertEqual(atoken.secret, oa_atoken.secret)
 
- 
+
+class BasicAuthTest(MainTests):
+
+    def test_invalid_auth_header(self):
+        response = self.client.get('/api/entries/')
+        self.assertEquals(response.status_code, 401)
+
+        # no space
+        bad_auth_string = 'Basic%s' % base64.encodestring('admin:admin').rstrip()
+        response = self.client.get('/api/entries/',
+            HTTP_AUTHORIZATION=bad_auth_string)
+        self.assertEquals(response.status_code, 401)
+
+        # no colon
+        bad_auth_string = 'Basic %s' % base64.encodestring('adminadmin').rstrip()
+        response = self.client.get('/api/entries/',
+            HTTP_AUTHORIZATION=bad_auth_string)
+        self.assertEquals(response.status_code, 401)
+
+        # non base64 data
+        bad_auth_string = 'Basic FOOBARQ!'
+        response = self.client.get('/api/entries/',
+            HTTP_AUTHORIZATION=bad_auth_string)
+        self.assertEquals(response.status_code, 401)
+
 class MultiXMLTests(MainTests):
     def init_delegate(self):
         self.t1_data = TestModel()
@@ -227,7 +251,14 @@ class IncomingExpressiveTests(MainTests):
             HTTP_AUTHORIZATION=self.auth_string).content
             
         self.assertEquals(result, expected)
-        
+
+    def test_incoming_invalid_json(self):
+        resp = self.client.post('/api/expressive.json',
+            'foo',
+            HTTP_AUTHORIZATION=self.auth_string,
+            content_type='application/json')
+        self.assertEquals(resp.status_code, 400)
+
     def test_incoming_yaml(self):
         if not yaml:
             return
@@ -266,6 +297,13 @@ class IncomingExpressiveTests(MainTests):
 """
         self.assertEquals(self.client.get('/api/expressive.yaml', 
             HTTP_AUTHORIZATION=self.auth_string).content, expected)
+
+    def test_incoming_invalid_yaml(self):
+        resp = self.client.post('/api/expressive.yaml',
+            '  8**sad asj lja foo',
+            HTTP_AUTHORIZATION=self.auth_string,
+            content_type='application/yaml')
+        self.assertEquals(resp.status_code, 400)
 
 class Issue36RegressionTests(MainTests):
     """
@@ -332,4 +370,39 @@ class PlainOldObject(MainTests):
         resp = self.client.get('/api/popo')
         self.assertEquals(resp.status_code, 200)
         self.assertEquals({'type': 'plain', 'field': 'a field'}, simplejson.loads(resp.content))
-        
+
+class Issue58ModelTests(MainTests):
+    """
+    This testcase addresses #58 in django-piston where if a model
+    has one of the ['read','update','delete','create'] defined
+    it make piston crash with a `TypeError`
+    """
+    def init_delegate(self):
+        m1 = Issue58Model(read=True,model='t') 
+        m1.save()
+        m2 = Issue58Model(read=False,model='f')
+        m2.save()
+
+    def test_incoming_json(self):
+        outgoing = simplejson.dumps({ 'read': True, 'model': 'T'})
+
+        expected = """[
+    {
+        "read": true, 
+        "model": "t"
+    }, 
+    {
+        "read": false, 
+        "model": "f"
+    }
+]"""
+
+        # test GET
+        result = self.client.get('/api/issue58.json',
+                                HTTP_AUTHORIZATION=self.auth_string).content
+        self.assertEquals(result, expected)
+
+        # test POST
+        resp = self.client.post('/api/issue58.json', outgoing, content_type='application/json',
+                                HTTP_AUTHORIZATION=self.auth_string)
+        self.assertEquals(resp.status_code, 201)

@@ -1,3 +1,5 @@
+import binascii
+
 import oauth
 from django.http import HttpResponse, HttpResponseRedirect
 from django.contrib.auth.models import User, AnonymousUser
@@ -45,13 +47,16 @@ class HttpBasicAuthentication(object):
         if not auth_string:
             return False
             
-        (authmeth, auth) = auth_string.split(" ", 1)
-        
-        if not authmeth.lower() == 'basic':
+        try:
+            (authmeth, auth) = auth_string.split(" ", 1)
+
+            if not authmeth.lower() == 'basic':
+                return False
+
+            auth = auth.strip().decode('base64')
+            (username, password) = auth.split(':', 1)
+        except (ValueError, binascii.Error):
             return False
-            
-        auth = auth.strip().decode('base64')
-        (username, password) = auth.split(':', 1)
         
         request.user = self.auth_func(username=username, password=password) \
             or AnonymousUser()

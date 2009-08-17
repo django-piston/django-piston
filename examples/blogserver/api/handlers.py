@@ -11,7 +11,7 @@ class AnonymousBlogpostHandler(AnonymousBaseHandler):
     fields = ('id', 'title', 'content', 'created_on')
 
     @classmethod
-    def resource_uri(self):
+    def resource_uri(cls):
         return ('blogposts', [ 'format', ])
 
 class BlogpostHandler(BaseHandler):
@@ -22,8 +22,16 @@ class BlogpostHandler(BaseHandler):
     anonymous = AnonymousBlogpostHandler
     fields = ('title', 'content', ('author', ('username',)), 
               'created_on', 'content_length')
-    
-    def read(self, title=None):
+
+    @classmethod
+    def content_length(cls, blogpost):
+        return len(blogpost.content)
+
+    @classmethod
+    def resource_uri(cls):
+        return ('blogposts', [ 'format', ])
+
+    def read(self, request, title=None):
         """
         Returns a blogpost, if `title` is given,
         otherwise all the posts.
@@ -37,10 +45,7 @@ class BlogpostHandler(BaseHandler):
             return base.get(title=title)
         else:
             return base.all()
-    
-    def content_length(self, blogpost):
-        return len(blogpost.content)
-        
+
     @require_extended
     def create(self, request):
         """
@@ -57,7 +62,3 @@ class BlogpostHandler(BaseHandler):
             post.save()
             
             return post
-    
-    @classmethod
-    def resource_uri(self):
-        return ('blogposts', [ 'format', ])

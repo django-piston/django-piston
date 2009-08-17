@@ -12,7 +12,7 @@ from handler import typemapper
 from doc import HandlerMethod
 from authentication import NoAuthentication
 from utils import coerce_put_post, FormValidationError, HttpStatusCode
-from utils import rc, format_error, translate_mime
+from utils import rc, format_error, translate_mime, MimerDataException
 
 class Resource(object):
     """
@@ -66,6 +66,11 @@ class Resource(object):
         """
         rm = request.method.upper()
 
+        # Django's internal mechanism doesn't pick up
+        # PUT request, so we trick it a little here.
+        if rm == "PUT":
+            coerce_put_post(request)
+
         if not self.authentication.is_authenticated(request):
             if hasattr(self.handler, 'anonymous') and \
                 callable(self.handler.anonymous) and \
@@ -78,14 +83,13 @@ class Resource(object):
         else:
             handler = self.handler
             anonymous = handler.is_anonymous
-                
-        # Django's internal mechanism doesn't pick up
-        # PUT request, so we trick it a little here.
-        if rm == "PUT":
-            coerce_put_post(request)
         
         # Translate nested datastructs into `request.data` here.
-        translate_mime(request)
+        if rm in ('POST', 'PUT'):
+            try:
+                translate_mime(request)
+            except MimerDataException:
+                return rc.BAD_REQUEST
         
         if not rm in handler.allowed_methods:
             return HttpResponseNotAllowed(handler.allowed_methods)

@@ -1,4 +1,4 @@
-from django.http import HttpResponseNotAllowed, HttpResponseForbidden, HttpResponse
+from django.http import HttpResponseNotAllowed, HttpResponseForbidden, HttpResponse, HttpResponseBadRequest
 from django.core.urlresolvers import reverse
 from django.core.cache import cache
 from django import get_version as django_version
@@ -6,7 +6,7 @@ from decorator import decorator
 
 from datetime import datetime, timedelta
 
-__version__ = '0.2.1'
+__version__ = '0.2.2'
 
 def get_version():
     return __version__
@@ -146,6 +146,13 @@ def coerce_put_post(request):
             
         request.PUT = request.POST
 
+
+class MimerDataException(Exception):
+    """
+    Raised if the content_type and data don't match
+    """
+    pass
+
 class Mimer(object):
     TYPES = dict()
     
@@ -154,8 +161,10 @@ class Mimer(object):
         
     def is_multipart(self):
         content_type = self.content_type()
+
         if content_type is not None:
             return content_type.lstrip().startswith('multipart')
+
         return False
 
     def loader_for_type(self, ctype):
@@ -164,20 +173,20 @@ class Mimer(object):
         for a certain mimetype.
         """
         for loadee, mimes in Mimer.TYPES.iteritems():
-            if ctype in mimes:
-                return loadee
+            for mime in mimes:
+                if ctype.startswith(mime):
+                    return loadee
 
     def content_type(self):
         """
         Returns the content type of the request in all cases where it is
         different than a submitted form - application/x-www-form-urlencoded
         """
-
         type_formencoded = "application/x-www-form-urlencoded"
 
         ctype = self.request.META.get('CONTENT_TYPE', type_formencoded)
         
-        if ctype == type_formencoded:
+        if ctype.startswith(type_formencoded):
             return None
         
         return ctype
@@ -208,11 +217,9 @@ class Mimer(object):
                 # Reset both POST and PUT from request, as its
                 # misleading having their presence around.
                 self.request.POST = self.request.PUT = dict()
-            except TypeError:
-                return rc.BAD_REQUEST # TODO: Handle this in super
-            except Exception, e:
-                raise
-                
+            except (TypeError, ValueError):
+                raise MimerDataException
+
         return self.request
                 
     @classmethod

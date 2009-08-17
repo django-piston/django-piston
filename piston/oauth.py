@@ -247,10 +247,11 @@ class OAuthRequest(object):
     @staticmethod
     def _split_header(header):
         params = {}
+        header = header.replace('OAuth ', '', 1)
         parts = header.split(',')
         for param in parts:
             # ignore realm parameter
-            if param.find('OAuth realm') > -1:
+            if param.find('realm') > -1:
                 continue
             # remove whitespace
             param = param.strip()
