@@ -29,3 +29,8 @@ class PlainOldObject(object):
     def __emittable__(self):
         return {'type': 'plain',
                 'field': 'a field'}
+
+class Issue58Model(models.Model):
+    read = models.BooleanField(default=False)
+    model = models.CharField(max_length=1, blank=True, null=True)
+    
