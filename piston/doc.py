@@ -36,7 +36,8 @@ class HandlerMethod(object):
             else:
                 yield (arg, None)
         
-    def get_signature(self, parse_optional=True):
+    @property
+    def signature(self, parse_optional=True):
         spec = ""
 
         for argn, argdef in self.iter_args():
@@ -53,18 +54,25 @@ class HandlerMethod(object):
             return spec.replace("=None", "=<optional>")
             
         return spec
-
-    signature = property(get_signature)
         
-    def get_doc(self):
+    @property
+    def doc(self):
         return inspect.getdoc(self.method)
     
-    doc = property(get_doc)
-    
-    def get_name(self):
+    @property
+    def name(self):
         return self.method.__name__
-        
-    name = property(get_name)
+    
+    @property
+    def http_name(self):
+        if self.name == 'read':
+            return 'GET'
+        elif self.name == 'create':
+            return 'POST'
+        elif self.name == 'delete':
+            return 'DELETE'
+        elif self.name == 'update':
+            return 'PUT'
     
     def __repr__(self):
         return "<Method: %s>" % self.name
@@ -97,11 +105,19 @@ class HandlerDocumentation(object):
     def get_model(self):
         return getattr(self, 'model', None)
             
-    def get_doc(self):
+    @property
+    def has_anonymous(self):
+        return self.handler.anonymous
+            
+    @property
+    def anonymous(self):
+        if self.has_anonymous:
+            return HandlerDocumentation(self.handler.anonymous)
+            
+    @property
+    def doc(self):
         return self.handler.__doc__
     
-    doc = property(get_doc)
-
     @property
     def name(self):
         return self.handler.__name__
