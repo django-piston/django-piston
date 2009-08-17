@@ -15,7 +15,7 @@ except ImportError:
 
 import urllib, base64
 
-from test_project.apps.testapp.models import TestModel, ExpressiveTestModel, Comment, InheritedModel, ListFieldsModel
+from test_project.apps.testapp.models import TestModel, ExpressiveTestModel, Comment, InheritedModel, Issue58Model, ListFieldsModel
 from test_project.apps.testapp import signals
 
 class MainTests(TestCase):
@@ -370,8 +370,6 @@ class PlainOldObject(MainTests):
         resp = self.client.get('/api/popo')
         self.assertEquals(resp.status_code, 200)
         self.assertEquals({'type': 'plain', 'field': 'a field'}, simplejson.loads(resp.content))
-        
-
 
 class ListFieldsTest(MainTests):
     def init_delegate(self):
@@ -409,4 +407,40 @@ class ListFieldsTest(MainTests):
         resp = self.client.get('/api/list_fields')
         self.assertEquals(resp.status_code, 200)
         self.assertEquals(resp.content, expect)
+        
+class Issue58ModelTests(MainTests):
+    """
+    This testcase addresses #58 in django-piston where if a model
+    has one of the ['read','update','delete','create'] defined
+    it make piston crash with a `TypeError`
+    """
+    def init_delegate(self):
+        m1 = Issue58Model(read=True,model='t') 
+        m1.save()
+        m2 = Issue58Model(read=False,model='f')
+        m2.save()
+
+    def test_incoming_json(self):
+        outgoing = simplejson.dumps({ 'read': True, 'model': 'T'})
+
+        expected = """[
+    {
+        "read": true, 
+        "model": "t"
+    }, 
+    {
+        "read": false, 
+        "model": "f"
+    }
+]"""
+
+        # test GET
+        result = self.client.get('/api/issue58.json',
+                                HTTP_AUTHORIZATION=self.auth_string).content
+        self.assertEquals(result, expected)
+
+        # test POST
+        resp = self.client.post('/api/issue58.json', outgoing, content_type='application/json',
+                                HTTP_AUTHORIZATION=self.auth_string)
+        self.assertEquals(resp.status_code, 201)
         

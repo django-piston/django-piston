@@ -2,6 +2,7 @@ from utils import rc
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 
 typemapper = { }
+handler_tracker = [ ]
 
 class HandlerMetaClass(type):
     """
@@ -14,6 +15,9 @@ class HandlerMetaClass(type):
         if hasattr(new_cls, 'model'):
             typemapper[new_cls] = (new_cls.model, new_cls.is_anonymous)
         
+        if name not in ('BaseHandler', 'AnonymousBaseHandler'):
+            handler_tracker.append(new_cls)
+
         return new_cls
 
 class BaseHandler(object):
