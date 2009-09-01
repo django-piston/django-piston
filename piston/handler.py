@@ -14,6 +14,8 @@ class HandlerMetaClass(type):
         
         if hasattr(new_cls, 'model'):
             typemapper[new_cls] = (new_cls.model, new_cls.is_anonymous)
+        else:
+            typemapper[new_cls] = (None, new_cls.is_anonymous)
         
         if name not in ('BaseHandler', 'AnonymousBaseHandler'):
             handler_tracker.append(new_cls)
