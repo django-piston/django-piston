@@ -59,6 +59,26 @@ class Resource(object):
 
         return em
     
+    @property
+    def anonymous(self):
+        """
+        Gets the anonymous handler. Also tries to grab a class
+        if the `anonymous` value is a string, so that we can define
+        anonymous handlers that aren't defined yet (like, when
+        you're subclassing your basehandler into an anonymous one.)
+        """
+        if hasattr(self.handler, 'anonymous'):
+            anon = self.handler.anonymous
+            
+            if callable(anon):
+                return anon
+
+            for klass in typemapper.keys():
+                if anon == klass.__name__:
+                    return klass
+            
+        return None
+    
     @vary_on_headers('Authorization')
     def __call__(self, request, *args, **kwargs):
         """
@@ -73,11 +93,10 @@ class Resource(object):
             coerce_put_post(request)
 
         if not self.authentication.is_authenticated(request):
-            if hasattr(self.handler, 'anonymous') and \
-                callable(self.handler.anonymous) and \
-                rm in self.handler.anonymous.allowed_methods:
+            if self.anonymous and \
+                rm in self.anonymous.allowed_methods:
 
-                handler = self.handler.anonymous()
+                handler = self.anonymous()
                 anonymous = True
             else:
                 return self.authentication.challenge()
