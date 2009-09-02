@@ -84,7 +84,11 @@ class HandlerDocumentation(object):
         
     def get_methods(self, include_default=False):
         for method in "read create update delete".split():
-            met = getattr(self.handler, method)
+            met = getattr(self.handler, method, None)
+
+            if not met:
+                continue
+                
             stale = inspect.getmodule(met) is handler
 
             if not self.handler.is_anonymous:
