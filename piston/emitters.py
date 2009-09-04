@@ -42,6 +42,9 @@ try:
 except ImportError:
     import pickle
 
+# Allow people to change the reverser (default `permalink`).
+reverser = permalink
+
 class Emitter(object):
     """
     Super emitter. All other emitters should subclass
@@ -240,12 +243,11 @@ class Emitter(object):
             if self.in_typemapper(type(data), self.anonymous):
                 handler = self.in_typemapper(type(data), self.anonymous)
                 if hasattr(handler, 'resource_uri'):
-                    url_id, fields = handler.resource_uri()
+                    url_id, fields = handler.resource_uri(data)
 
                     try:
-                        ret['resource_uri'] = permalink( lambda: (url_id, 
-                            (getattr(data, f, '') for f in fields) ) )()
-                    except NoReverseMatch:
+                        ret['resource_uri'] = reverser( lambda: (url_id, fields) )()
+                    except NoReverseMatch, e:
                         pass
             
             if hasattr(data, 'get_api_url') and 'resource_uri' not in ret:
