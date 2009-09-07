@@ -2,6 +2,7 @@ from utils import rc
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 
 typemapper = { }
+handler_tracker = [ ]
 
 class HandlerMetaClass(type):
     """
@@ -13,7 +14,12 @@ class HandlerMetaClass(type):
         
         if hasattr(new_cls, 'model'):
             typemapper[new_cls] = (new_cls.model, new_cls.is_anonymous)
+        else:
+            typemapper[new_cls] = (None, new_cls.is_anonymous)
         
+        if name not in ('BaseHandler', 'AnonymousBaseHandler'):
+            handler_tracker.append(new_cls)
+
         return new_cls
 
 class BaseHandler(object):
@@ -37,7 +43,10 @@ class BaseHandler(object):
         return dict([ (str(k), dct.get(k)) for k in dct.keys() ])
     
     def has_model(self):
-        return hasattr(self, 'model')
+        return hasattr(self, 'model') or hasattr(self, 'queryset')
+
+    def queryset(self, request):
+        return self.model.objects.all()
     
     def value_from_tuple(tu, name):
         for int_, n in tu:
@@ -63,13 +72,13 @@ class BaseHandler(object):
 
         if pkfield in kwargs:
             try:
-                return self.model.objects.get(pk=kwargs.get(pkfield))
+                return self.queryset(request).get(pk=kwargs.get(pkfield))
             except ObjectDoesNotExist:
                 return rc.NOT_FOUND
             except MultipleObjectsReturned: # should never happen, since we're using a PK
                 return rc.BAD_REQUEST
         else:
-            return self.model.objects.filter(*args, **kwargs)
+            return self.queryset(request).filter(*args, **kwargs)
     
     def create(self, request, *args, **kwargs):
         if not self.has_model():
@@ -78,7 +87,7 @@ class BaseHandler(object):
         attrs = self.flatten_dict(request.POST)
         
         try:
-            inst = self.model.objects.get(**attrs)
+            inst = self.queryset(request).get(**attrs)
             return rc.DUPLICATE_ENTRY
         except self.model.DoesNotExist:
             inst = self.model(**attrs)
@@ -88,15 +97,35 @@ class BaseHandler(object):
             return rc.DUPLICATE_ENTRY
     
     def update(self, request, *args, **kwargs):
-        # TODO: This doesn't work automatically yet.
-        return rc.NOT_IMPLEMENTED
+        if not self.has_model():
+            return rc.NOT_IMPLEMENTED
+
+        pkfield = self.model._meta.pk.name
+
+        if pkfield not in kwargs:
+            # No pk was specified
+            return rc.BAD_REQUEST
+
+        try:
+            inst = self.queryset(request).get(pk=kwargs.get(pkfield))
+        except ObjectDoesNotExist:
+            return rc.NOT_FOUND
+        except MultipleObjectsReturned: # should never happen, since we're using a PK
+            return rc.BAD_REQUEST
+
+        attrs = self.flatten_dict(request.POST)
+        for k,v in attrs.iteritems():
+            setattr( inst, k, v )
+
+        inst.save()
+        return rc.ALL_OK
     
     def delete(self, request, *args, **kwargs):
         if not self.has_model():
             raise NotImplementedError
 
         try:
-            inst = self.model.objects.get(*args, **kwargs)
+            inst = self.queryset(request).get(*args, **kwargs)
 
             inst.delete()
 

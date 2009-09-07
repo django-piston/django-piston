@@ -1,6 +1,7 @@
 from __future__ import generators
 
 import decimal, re, inspect
+import copy
 
 try:
     # yaml isn't standard with python.  It shouldn't be required if it
@@ -24,6 +25,7 @@ from django.db.models import Model, permalink
 from django.utils import simplejson
 from django.utils.xmlutils import SimplerXMLGenerator
 from django.utils.encoding import smart_unicode
+from django.core.urlresolvers import reverse, NoReverseMatch
 from django.core.serializers.json import DateTimeAwareJSONEncoder
 from django.http import HttpResponse
 from django.core import serializers
@@ -39,6 +41,9 @@ try:
     import cPickle as pickle
 except ImportError:
     import pickle
+
+# Allow people to change the reverser (default `permalink`).
+reverser = permalink
 
 class Emitter(object):
     """
@@ -68,7 +73,7 @@ class Emitter(object):
         ret = dict()
             
         for field in fields:
-            if field in has:
+            if field in has and callable(field):
                 ret[field] = getattr(data, field)
         
         return ret
@@ -171,7 +176,7 @@ class Emitter(object):
                     get_fields = set(fields)
 
                 met_fields = self.method_fields(handler, get_fields)
-
+                
                 for f in data._meta.local_fields:
                     if f.serialize and not any([ p in met_fields for p in [ f.attname, f.name ]]):
                         if not f.rel:
@@ -191,7 +196,6 @@ class Emitter(object):
                 
                 # try to get the remainder of fields
                 for maybe_field in get_fields:
-                    
                     if isinstance(maybe_field, (list, tuple)):
                         model, fields = maybe_field
                         inst = getattr(data, model, None)
@@ -239,9 +243,12 @@ class Emitter(object):
             if self.in_typemapper(type(data), self.anonymous):
                 handler = self.in_typemapper(type(data), self.anonymous)
                 if hasattr(handler, 'resource_uri'):
-                    url_id, fields = handler.resource_uri()
-                    ret['resource_uri'] = permalink( lambda: (url_id, 
-                        (getattr(data, f) for f in fields) ) )()
+                    url_id, fields = handler.resource_uri(data)
+
+                    try:
+                        ret['resource_uri'] = reverser( lambda: (url_id, fields) )()
+                    except NoReverseMatch, e:
+                        pass
             
             if hasattr(data, 'get_api_url') and 'resource_uri' not in ret:
                 try: ret['resource_uri'] = data.get_api_url()
