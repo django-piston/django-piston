@@ -132,12 +132,14 @@ class Resource(object):
         try:
             result = meth(request, *args, **kwargs)
         except FormValidationError, e:
-            # TODO: Use rc.BAD_REQUEST here
-            return HttpResponse("Bad Request: %s" % e.form.errors, status=400)
+            resp = rc.BAD_REQUEST
+            resp.write(e.form.errors)
+            
+            return rsep
         except TypeError, e:
             result = rc.BAD_REQUEST
             hm = HandlerMethod(meth)
-            sig = hm.get_signature()
+            sig = hm.signature
 
             msg = 'Method signature does not match.\n\n'
             
@@ -151,7 +153,6 @@ class Resource(object):
                 
             result.content = format_error(msg)
         except HttpStatusCode, e:
-            #result = e ## why is this being passed on and not just dealt with now?
             return e.response
         except Exception, e:
             """
@@ -196,7 +197,10 @@ class Resource(object):
             if self.stream: stream = srl.stream_render(request)
             else: stream = srl.render(request)
 
-            resp = HttpResponse(stream, mimetype=ct)
+            if not isinstance(stream, HttpResponse):
+                resp = HttpResponse(stream, mimetype=ct)
+            else:
+                resp = stream
 
             resp.streaming = self.stream
 
