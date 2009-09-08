@@ -355,7 +355,7 @@ class ValidationTest(MainTests):
     def test_basic_validation_fails(self):
         resp = self.client.get('/api/echo')
         self.assertEquals(resp.status_code, 400)
-        self.assertEquals(resp.content, 'Bad Request: <ul class="errorlist">'
+        self.assertEquals(resp.content, 'Bad Request <ul class="errorlist">'
             '<li>msg<ul class="errorlist"><li>This field is required.</li>'
             '</ul></li></ul>')
 
