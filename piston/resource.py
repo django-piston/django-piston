@@ -133,9 +133,9 @@ class Resource(object):
             result = meth(request, *args, **kwargs)
         except FormValidationError, e:
             resp = rc.BAD_REQUEST
-            resp.write(e.form.errors)
+            resp.write(' '+str(e.form.errors))
             
-            return rsep
+            return resp
         except TypeError, e:
             result = rc.BAD_REQUEST
             hm = HandlerMethod(meth)
