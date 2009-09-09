@@ -39,7 +39,7 @@ class DataStore(oauth.OAuthDataStore):
         else:
             return nonce.key
 
-    def fetch_request_token(self, oauth_consumer):
+    def fetch_request_token(self, oauth_consumer, oauth_callback):
         if oauth_consumer.key == self.consumer.key:
             self.request_token = Token.objects.create_token(consumer=self.consumer,
                                                             token_type=Token.REQUEST,
@@ -47,7 +47,7 @@ class DataStore(oauth.OAuthDataStore):
             return self.request_token
         return None
 
-    def fetch_access_token(self, oauth_consumer, oauth_token):
+    def fetch_access_token(self, oauth_consumer, oauth_token, oauth_callback):
         if oauth_consumer.key == self.consumer.key \
         and oauth_token.key == self.request_token.key \
         and self.request_token.is_approved:
