@@ -97,8 +97,8 @@ def initialize_server_request(request):
     """
     Shortcut for initialization.
     """
-    if request.method == "POST" and \
-       request.META['CONTENT_TYPE'] == "application/x-www-form-urlencoded":
+    if request.method == "POST": #and \
+#       request.META['CONTENT_TYPE'] == "application/x-www-form-urlencoded":
         params = dict(request.REQUEST.items())
     else:
         params = {}
@@ -150,7 +150,7 @@ def oauth_auth_view(request, token, callback, params):
     form = forms.OAuthAuthenticationForm(initial={
         'oauth_token': token.key,
         'oauth_callback': callback,
-        })
+      })
 
     return render_to_response('piston/authorize_token.html',
             { 'form': form }, RequestContext(request))
@@ -188,6 +188,7 @@ def oauth_user_auth(request):
                 args = '?'+token.to_string(only_key=True)
             else:
                 args = '?error=%s' % 'Access not granted by user.'
+                print "FORM ERROR", form.errors
             
             if not callback:
                 callback = getattr(settings, 'OAUTH_CALLBACK_VIEW')

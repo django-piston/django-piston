@@ -52,8 +52,15 @@ class Emitter(object):
     conveniently returns a serialized `dict`. This is
     usually the only method you want to use in your
     emitter. See below for examples.
+
+    `RESERVED_FIELDS` was introduced when better resource
+    method detection came, and we accidentially caught these
+    as the methods on the handler. Issue58 says that's no good.
     """
     EMITTERS = { }
+    RESERVED_FIELDS = set([ 'read', 'update', 'create', 
+                            'delete', 'model', 'anonymous',
+                            'allowed_methods', 'fields', 'exclude' ])
 
     def __init__(self, payload, typemapper, handler, fields=(), anonymous=True):
         self.typemapper = typemapper
@@ -65,17 +72,19 @@ class Emitter(object):
         if isinstance(self.data, Exception):
             raise
     
-    def method_fields(self, data, fields):
-        if not data:
+    def method_fields(self, handler, fields):
+        if not handler:
             return { }
 
-        has = dir(data)
+        has = dir(handler)
         ret = dict()
             
-        for field in fields:
-            if field in has and callable(field):
-                ret[field] = getattr(data, field)
-        
+        for field in fields - Emitter.RESERVED_FIELDS:
+            t = getattr(handler, str(field), None)
+
+            if t and callable(t):
+                ret[field] = t
+
         return ret
     
     def construct(self):
@@ -111,6 +120,8 @@ class Emitter(object):
                 f = thing.__emittable__
                 if inspect.ismethod(f) and len(inspect.getargspec(f)[0]) == 1:
                     ret = _any(f())
+            elif repr(thing).startswith("<django.db.models.fields.related.RelatedManager"):
+                ret = _any(thing.all())
             else:
                 ret = smart_unicode(thing, strings_only=True)
 
@@ -176,7 +187,7 @@ class Emitter(object):
                     get_fields = set(fields)
 
                 met_fields = self.method_fields(handler, get_fields)
-                
+                           
                 for f in data._meta.local_fields:
                     if f.serialize and not any([ p in met_fields for p in [ f.attname, f.name ]]):
                         if not f.rel:

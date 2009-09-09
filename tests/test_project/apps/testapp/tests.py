@@ -100,7 +100,6 @@ class OAuthTests(MainTests):
         atoken = Token.objects.get(key=oa_atoken.key, token_type=Token.ACCESS)
         self.assertEqual(atoken.secret, oa_atoken.secret)
 
-
 class BasicAuthTest(MainTests):
 
     def test_invalid_auth_header(self):
