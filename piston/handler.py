@@ -1,5 +1,8 @@
+import warnings
+
 from utils import rc
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
+from django.conf import settings
 
 typemapper = { }
 handler_tracker = [ ]
@@ -11,8 +14,18 @@ class HandlerMetaClass(type):
     """
     def __new__(cls, name, bases, attrs):
         new_cls = type.__new__(cls, name, bases, attrs)
+
+        def already_registered(model, anon):
+            for k, (m, a) in typemapper.iteritems():
+                if model == m and anon == a:
+                    return k
         
         if hasattr(new_cls, 'model'):
+            if already_registered(new_cls.model, new_cls.is_anonymous):
+                if not getattr(settings, 'PISTON_IGNORE_DUPE_MODELS', False):
+                    warnings.warn("Handler already registered for model %s, "
+                        "you may experience inconsistent results." % new_cls.model.__name__)
+                
             typemapper[new_cls] = (new_cls.model, new_cls.is_anonymous)
         else:
             typemapper[new_cls] = (None, new_cls.is_anonymous)
