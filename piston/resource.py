@@ -7,6 +7,7 @@ from django.views.decorators.vary import vary_on_headers
 from django.conf import settings
 from django.core.mail import send_mail, EmailMessage
 from django.db.models.query import QuerySet
+from django.http import Http404
 
 from emitters import Emitter
 from handler import typemapper
@@ -152,6 +153,8 @@ class Resource(object):
                 msg += '\n\nException was: %s' % str(e)
                 
             result.content = format_error(msg)
+        except Http404:
+            return rc.NOT_FOUND
         except HttpStatusCode, e:
             return e.response
         except Exception, e:
