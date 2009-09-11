@@ -108,24 +108,20 @@ def throttle(max_requests, timeout=60*60, extra=''):
             """
             ident += ':%s' % extra
     
-            now = datetime.now()
-            ts_key = 'throttle:ts:%s' % ident
-            timestamp = cache.get(ts_key)
-            offset = now + timedelta(seconds=timeout)
-    
-            if timestamp and timestamp < offset:
+            now = time.time()
+            count, expiration = cache.get(ident, (1, None))
+
+            if expiration is None:
+                expiration = now + timeout
+
+            if count >= max_requests and expiration > now:
                 t = rc.THROTTLED
-                wait = timeout - (offset-timestamp).seconds
+                wait = int(expiration - now)
                 t.content = 'Throttled, wait %d seconds.' % wait
-                
+                t['Retry-After'] = wait
                 return t
-                
-            count = cache.get(ident, 1)
-            cache.set(ident, count+1)
-            
-            if count >= max_requests:
-                cache.set(ts_key, offset, timeout)
-                cache.set(ident, 1)
+
+            cache.set(ident, (count+1, expiration), (expiration - now))
     
         return f(self, request, *args, **kwargs)
     return wrap
