@@ -38,7 +38,7 @@ class ExpressiveHandler(BaseHandler):
         return inst
         
     def create(self, request):
-        if request.content_type:
+        if request.content_type and request.data:
             data = request.data
             
             em = self.model(title=data['title'], content=data['content'])
@@ -49,7 +49,7 @@ class ExpressiveHandler(BaseHandler):
                 
             return rc.CREATED
         else:
-            super(ExpressiveTestModel, self).create(request)
+            super(ExpressiveHandler, self).create(request)
             
 class AbstractHandler(BaseHandler):
     fields = ('id', 'some_other', 'some_field')
