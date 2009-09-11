@@ -11,7 +11,7 @@ from decorator import decorator
 
 from datetime import datetime, timedelta
 
-__version__ = '0.2.2'
+__version__ = '0.2.3rc1'
 
 def get_version():
     return __version__
