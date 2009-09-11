@@ -23,7 +23,7 @@ class ModelForm(forms.ModelForm):
 
 class OAuthAuthenticationForm(forms.Form):
     oauth_token = forms.CharField(widget=forms.HiddenInput)
-    oauth_callback = forms.CharField(widget=forms.HiddenInput)
+    oauth_callback = forms.CharField(widget=forms.HiddenInput, required=False)
     authorize_access = forms.BooleanField(required=True)
     csrf_signature = forms.CharField(widget=forms.HiddenInput)
 

@@ -1,6 +1,7 @@
 import oauth
 
 from models import Nonce, Token, Consumer
+from models import generate_random, VERIFIER_SIZE
 
 class DataStore(oauth.OAuthDataStore):
     """Layer between Python OAuth and Django database."""
@@ -44,12 +45,17 @@ class DataStore(oauth.OAuthDataStore):
             self.request_token = Token.objects.create_token(consumer=self.consumer,
                                                             token_type=Token.REQUEST,
                                                             timestamp=self.timestamp)
+            
+            if oauth_callback:
+                self.request_token.set_callback(oauth_callback)
+            
             return self.request_token
         return None
 
-    def fetch_access_token(self, oauth_consumer, oauth_token, oauth_callback):
+    def fetch_access_token(self, oauth_consumer, oauth_token, oauth_verifier):
         if oauth_consumer.key == self.consumer.key \
         and oauth_token.key == self.request_token.key \
+        and oauth_verifier == self.request_token.verifier \
         and self.request_token.is_approved:
             self.access_token = Token.objects.create_token(consumer=self.consumer,
                                                            token_type=Token.ACCESS,
@@ -63,6 +69,7 @@ class DataStore(oauth.OAuthDataStore):
             # authorize the request token in the store
             self.request_token.is_approved = True
             self.request_token.user = user
+            self.request_token.verifier = generate_random(VERIFIER_SIZE)
             self.request_token.save()
             return self.request_token
         return None
