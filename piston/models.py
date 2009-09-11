@@ -1,4 +1,4 @@
-import urllib, time
+import urllib, time, urlparse
 
 # Django imports
 from django.db.models.signals import post_save, post_delete
@@ -13,6 +13,7 @@ from signals import consumer_post_save, consumer_post_delete
 
 KEY_SIZE = 18
 SECRET_SIZE = 32
+VERIFIER_SIZE = 10
 
 CONSUMER_STATES = (
     ('pending', 'Pending'),
@@ -20,6 +21,9 @@ CONSUMER_STATES = (
     ('canceled', 'Canceled'),
     ('rejected', 'Rejected')
 )
+
+def generate_random(length=SECRET_SIZE):
+    return User.objects.make_random_password(length=length)
 
 class Nonce(models.Model):
     token_key = models.CharField(max_length=KEY_SIZE)
@@ -58,11 +62,10 @@ class Consumer(models.Model):
         c.generate_random_codes()
         """
         key = User.objects.make_random_password(length=KEY_SIZE)
-
-        secret = User.objects.make_random_password(length=SECRET_SIZE)
+        secret = generate_random(SECRET_SIZE)
 
         while Consumer.objects.filter(key__exact=key, secret__exact=secret).count():
-            secret = User.objects.make_random_password(length=SECRET_SIZE)
+            secret = generate_random(SECRET_SIZE)
 
         self.key = key
         self.secret = secret
@@ -77,12 +80,16 @@ class Token(models.Model):
     
     key = models.CharField(max_length=KEY_SIZE)
     secret = models.CharField(max_length=SECRET_SIZE)
+    verifier = models.CharField(max_length=VERIFIER_SIZE)
     token_type = models.IntegerField(choices=TOKEN_TYPES)
     timestamp = models.IntegerField(default=long(time.time()))
     is_approved = models.BooleanField(default=False)
     
     user = models.ForeignKey(User, null=True, blank=True, related_name='tokens')
     consumer = models.ForeignKey(Consumer)
+    
+    callback = models.CharField(max_length=255, null=True, blank=True)
+    callback_confirmed = models.BooleanField(default=False)
     
     objects = TokenManager()
     
@@ -92,22 +99,49 @@ class Token(models.Model):
     def to_string(self, only_key=False):
         token_dict = {
             'oauth_token': self.key, 
-            'oauth_token_secret': self.secret
+            'oauth_token_secret': self.secret,
+            'oauth_callback_confirmed': 'true',
         }
+
+        if self.verifier:
+            token_dict.update({ 'oauth_verifier': self.verifier })
+
         if only_key:
             del token_dict['oauth_token_secret']
+
         return urllib.urlencode(token_dict)
 
     def generate_random_codes(self):
         key = User.objects.make_random_password(length=KEY_SIZE)
-        secret = User.objects.make_random_password(length=SECRET_SIZE)
+        secret = generate_random(SECRET_SIZE)
 
         while Token.objects.filter(key__exact=key, secret__exact=secret).count():
-            secret = User.objects.make_random_password(length=SECRET_SIZE)
+            secret = generate_random(SECRET_SIZE)
 
         self.key = key
         self.secret = secret
         self.save()
+        
+    # -- OAuth 1.0a stuff
+
+    def get_callback_url(self):
+        if self.callback and self.verifier:
+            # Append the oauth_verifier.
+            parts = urlparse.urlparse(self.callback)
+            scheme, netloc, path, params, query, fragment = parts[:6]
+            if query:
+                query = '%s&oauth_verifier=%s' % (query, self.verifier)
+            else:
+                query = 'oauth_verifier=%s' % self.verifier
+            return urlparse.urlunparse((scheme, netloc, path, params,
+                query, fragment))
+        return self.callback
+    
+    def set_callback(self, callback):
+        if callback != "oob": # out of band, says "we can't do this!"
+            self.callback = callback
+            self.callback_confirmed = True
+            self.save()
         
 admin.site.register(Token)
 

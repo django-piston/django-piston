@@ -101,7 +101,11 @@ def initialize_server_request(request):
 #       request.META['CONTENT_TYPE'] == "application/x-www-form-urlencoded":
         params = dict(request.REQUEST.items())
     else:
-        params = {}
+        params = { }
+
+    # Seems that we want to put HTTP_AUTHORIZATION into 'Authorization'
+    # for oauth.py to understand. Lovely.
+    request.META['Authorization'] = request.META.get('HTTP_AUTHORIZATION', '')
 
     oauth_request = oauth.OAuthRequest.from_request(
         request.method, request.build_absolute_uri(), 
@@ -149,7 +153,7 @@ def oauth_request_token(request):
 def oauth_auth_view(request, token, callback, params):
     form = forms.OAuthAuthenticationForm(initial={
         'oauth_token': token.key,
-        'oauth_callback': callback,
+        'oauth_callback': token.get_callback_url() or callback,
       })
 
     return render_to_response('piston/authorize_token.html',
@@ -171,7 +175,7 @@ def oauth_user_auth(request):
         callback = oauth_server.get_callback(oauth_request)
     except:
         callback = None
-        
+    
     if request.method == "GET":
         params = oauth_request.get_normalized_parameters()
 

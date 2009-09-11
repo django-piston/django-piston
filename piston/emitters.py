@@ -76,7 +76,6 @@ class Emitter(object):
         if not handler:
             return { }
 
-        has = dir(handler)
         ret = dict()
             
         for field in fields - Emitter.RESERVED_FIELDS:
