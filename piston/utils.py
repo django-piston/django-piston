@@ -298,12 +298,13 @@ def send_consumer_mail(consumer):
     except AttributeError:
         sender = settings.DEFAULT_FROM_EMAIL
 
-    send_mail(_(subject), body, sender, [consumer.user.email], fail_silently=True)
+    if consumer.user:
+        send_mail(_(subject), body, sender, [consumer.user.email], fail_silently=True)
 
     if consumer.status == 'pending' and len(settings.ADMINS):
         mail_admins(_(subject), body, fail_silently=True)
 
-    if settings.DEBUG:
+    if settings.DEBUG and consumer.user:
         print "Mail being sent, to=%s" % consumer.user.email
         print "Subject: %s" % _(subject)
         print body
