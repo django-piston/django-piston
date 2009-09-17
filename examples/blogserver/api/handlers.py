@@ -3,23 +3,12 @@ from piston.utils import rc, require_mime, require_extended
 
 from blogserver.blog.models import Blogpost
 
-class AnonymousBlogpostHandler(AnonymousBaseHandler):
-    """
-    Anonymous entrypoint for blogposts.
-    """
-    model = Blogpost
-    fields = ('id', 'title', 'content', 'created_on')
-
-    @classmethod
-    def resource_uri(cls):
-        return ('blogposts', [ 'format', ])
-
 class BlogpostHandler(BaseHandler):
     """
     Authenticated entrypoint for blogposts.
     """
     model = Blogpost
-    anonymous = AnonymousBlogpostHandler
+    anonymous = 'AnonymousBlogpostHandler'
     fields = ('title', 'content', ('author', ('username',)), 
               'created_on', 'content_length')
 
@@ -28,8 +17,8 @@ class BlogpostHandler(BaseHandler):
         return len(blogpost.content)
 
     @classmethod
-    def resource_uri(cls):
-        return ('blogposts', [ 'format', ])
+    def resource_uri(cls, blogpost):
+        return ('blogposts', [ 'json', ])
 
     def read(self, request, title=None):
         """
@@ -46,7 +35,6 @@ class BlogpostHandler(BaseHandler):
         else:
             return base.all()
 
-    @require_extended
     def create(self, request):
         """
         Creates a new blogpost.
@@ -62,3 +50,9 @@ class BlogpostHandler(BaseHandler):
             post.save()
             
             return post
+
+class AnonymousBlogpostHandler(BlogpostHandler, AnonymousBaseHandler):
+    """
+    Anonymous entrypoint for blogposts.
+    """
+    fields = ('id', 'title', 'content', 'created_on')
