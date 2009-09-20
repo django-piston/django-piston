@@ -9,7 +9,7 @@ Benoit Chesneau provided some mimetype helpers
 Adam Lowry fixed a bug with the callmap construct
 Benjamin Pollack provided an ez_setup fix and more
 Seph Soliman for fixing a bug with AnonymousBaseHandler
-David Larlet for suggesting several improvements
+David Larlet for suggesting several improvements and including Piston in ROA
 Xavier Barbosa for improving QuerySet handling and providing Template URI code
 Michael Richardson for contributing an improvement to form validation handling
 Brian McMurray for contributing a patch for #41
@@ -18,3 +18,6 @@ Anton Tsigularov for providing a patch for incorrect multipart detection
 Remco Wendt for fixing up the example blog server to conform with 0.2.2, et. al
 Benoit Garret for providing a fix for oauth headers, issue #56
 Stephan Preeker for providing some fixes to documentation generation
+Taavi Taijala for alarming us to the dangers of arbitrary unpickling
+Joe Stump for testing and contributing the OAuth bits
+Mike Malone for giving a presentation on Piston, and fixing our throttler :-)
