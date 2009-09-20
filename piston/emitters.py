@@ -402,7 +402,7 @@ class YAMLEmitter(Emitter):
 
 if yaml:  # Only register yaml if it was import successfully.
     Emitter.register('yaml', YAMLEmitter, 'application/x-yaml; charset=utf-8')
-    Mimer.register(yaml.load, ('application/x-yaml',))
+    Mimer.register(lambda s: dict(yaml.load(s)), ('application/x-yaml',))
 
 class PickleEmitter(Emitter):
     """
@@ -412,7 +412,17 @@ class PickleEmitter(Emitter):
         return pickle.dumps(self.construct())
         
 Emitter.register('pickle', PickleEmitter, 'application/python-pickle')
-Mimer.register(pickle.loads, ('application/python-pickle',))
+
+"""
+WARNING: Accepting arbitrary pickled data is a huge security concern.
+The unpickler has been disabled by default now, and if you want to use
+it, please be aware of what implications it will have.
+
+Read more: http://nadiana.com/python-pickle-insecure
+
+Uncomment the line below to enable it. You're doing so at your own risk.
+"""
+# Mimer.register(pickle.loads, ('application/python-pickle',))
 
 class DjangoEmitter(Emitter):
     """

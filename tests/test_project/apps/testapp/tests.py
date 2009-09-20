@@ -303,7 +303,7 @@ class IncomingExpressiveTests(MainTests):
         resp = self.client.post('/api/expressive.yaml',
             '  8**sad asj lja foo',
             HTTP_AUTHORIZATION=self.auth_string,
-            content_type='application/yaml')
+            content_type='application/x-yaml')
         self.assertEquals(resp.status_code, 400)
 
 class Issue36RegressionTests(MainTests):
