@@ -59,7 +59,18 @@ class Resource(object):
             em = request.GET.get('format', 'json')
 
         return em
-    
+
+    def form_validation_response(self, e):
+        """
+        Method to return form validation error information. 
+        You will probably want to override this in your own
+        `Resource` subclass.
+        """
+        resp = rc.BAD_REQUEST
+        resp.write(' '+str(e.form.errors))
+        return resp
+
+
     @property
     def anonymous(self):
         """
@@ -133,10 +144,8 @@ class Resource(object):
         try:
             result = meth(request, *args, **kwargs)
         except FormValidationError, e:
-            resp = rc.BAD_REQUEST
-            resp.write(' '+str(e.form.errors))
+            return self.form_validation_response(e)
             
-            return resp
         except TypeError, e:
             result = rc.BAD_REQUEST
             hm = HandlerMethod(meth)
