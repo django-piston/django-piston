@@ -60,7 +60,7 @@ class HttpBasicAuthentication(object):
         
         request.user = self.auth_func(username=username, password=password) \
             or AnonymousUser()
-        
+                
         return not request.user in (False, None, AnonymousUser())
         
     def challenge(self):
@@ -68,6 +68,20 @@ class HttpBasicAuthentication(object):
         resp['WWW-Authenticate'] = 'Basic realm="%s"' % self.realm
         resp.status_code = 401
         return resp
+
+    def __repr__(self):
+        return u'<HTTPBasic: realm=%s>' % self.realm
+
+class HttpBasicSimple(HttpBasicAuthentication):
+    def __init__(self, realm, username, password):
+        self.user = User.objects.get(username=username)
+        self.password = password
+
+        super(HttpBasicSimple, self).__init__(auth_func=self.hash, realm=realm)
+    
+    def hash(self, username, password):
+        if username == self.user.username and password == self.password:
+            return self.user
 
 def load_data_store():
     '''Load data store for OAuth Consumers, Tokens, Nonces and Resources

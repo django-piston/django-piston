@@ -16,6 +16,8 @@ from authentication import NoAuthentication
 from utils import coerce_put_post, FormValidationError, HttpStatusCode
 from utils import rc, format_error, translate_mime, MimerDataException
 
+CHALLENGE = object()
+
 class Resource(object):
     """
     Resource. Create one for your URL mappings, just
@@ -34,9 +36,11 @@ class Resource(object):
         self.handler = handler()
         
         if not authentication:
-            self.authentication = NoAuthentication()
-        else:
+            self.authentication = (NoAuthentication(),)
+        elif isinstance(authentication, list):
             self.authentication = authentication
+        else:
+            self.authentication = (authentication,)
             
         # Erroring
         self.email_errors = getattr(settings, 'PISTON_EMAIL_ERRORS', True)
@@ -80,6 +84,22 @@ class Resource(object):
             
         return None
     
+    def authenticate(self, request, rm):
+        actor, anonymous = False, True
+
+        for authenticator in self.authentication:
+            if not authenticator.is_authenticated(request):
+                if self.anonymous and \
+                    rm in self.anonymous.allowed_methods:
+
+                    actor, anonymous = self.anonymous(), True
+                else:
+                    actor, anonymous = authenticator.challenge, CHALLENGE
+            else:
+                return self.handler, self.handler.is_anonymous
+        
+        return actor, anonymous
+    
     @vary_on_headers('Authorization')
     def __call__(self, request, *args, **kwargs):
         """
@@ -93,17 +113,12 @@ class Resource(object):
         if rm == "PUT":
             coerce_put_post(request)
 
-        if not self.authentication.is_authenticated(request):
-            if self.anonymous and \
-                rm in self.anonymous.allowed_methods:
+        actor, anonymous = self.authenticate(request, rm)
 
-                handler = self.anonymous()
-                anonymous = True
-            else:
-                return self.authentication.challenge()
+        if anonymous is CHALLENGE:
+            return actor()
         else:
-            handler = self.handler
-            anonymous = handler.is_anonymous
+            handler = actor
         
         # Translate nested datastructs into `request.data` here.
         if rm in ('POST', 'PUT'):
