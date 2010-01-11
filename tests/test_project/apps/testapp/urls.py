@@ -1,6 +1,6 @@
 from django.conf.urls.defaults import *
 from piston.resource import Resource
-from piston.authentication import HttpBasicAuthentication
+from piston.authentication import HttpBasicAuthentication, HttpBasicSimple
 
 from test_project.apps.testapp.handlers import EntryHandler, ExpressiveHandler, AbstractHandler, EchoHandler, PlainOldObjectHandler, Issue58Handler, ListFieldsHandler
 
@@ -13,6 +13,19 @@ echo = Resource(handler=EchoHandler)
 popo = Resource(handler=PlainOldObjectHandler)
 list_fields = Resource(handler=ListFieldsHandler)
 issue58 = Resource(handler=Issue58Handler)
+
+AUTHENTICATORS = [auth,]
+SIMPLE_USERS = (('admin', 'secr3t'),
+                ('admin', 'user'),
+                ('admin', 'allwork'),
+                ('admin', 'thisisneat'))
+
+for username, password in SIMPLE_USERS:
+    AUTHENTICATORS.append(HttpBasicSimple(realm='Test', 
+                            username=username, password=password))
+
+multiauth = Resource(handler=PlainOldObjectHandler, 
+                        authentication=AUTHENTICATORS)
 
 urlpatterns = patterns('',
     url(r'^entries/$', entries),
@@ -28,6 +41,8 @@ urlpatterns = patterns('',
     url(r'^abstract/(?P<id_>\d+)\.(?P<emitter_format>.+)$', abstract),
 
     url(r'^echo$', echo),
+
+    url(r'^multiauth/$', multiauth),
 
     # oauth entrypoints
     url(r'^oauth/request_token$', 'piston.authentication.oauth_request_token'),

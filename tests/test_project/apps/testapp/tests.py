@@ -126,6 +126,20 @@ class BasicAuthTest(MainTests):
             HTTP_AUTHORIZATION=bad_auth_string)
         self.assertEquals(response.status_code, 401)
 
+class TestMultipleAuthenticators(MainTests):
+    def test_both_authenticators(self):
+        for username, password in (('admin', 'admin'), 
+                                   ('admin', 'secr3t'),
+                                   ('admin', 'user'),
+                                   ('admin', 'allwork'),
+                                   ('admin', 'thisisneat')):
+            auth_string = 'Basic %s' % base64.encodestring('%s:%s' % (username, password)).rstrip()
+
+            response = self.client.get('/api/multiauth/',
+                HTTP_AUTHORIZATION=auth_string)
+
+            self.assertEquals(response.status_code, 200, 'Failed with combo of %s:%s' % (username, password))
+
 class MultiXMLTests(MainTests):
     def init_delegate(self):
         self.t1_data = TestModel()
