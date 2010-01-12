@@ -37,7 +37,7 @@ class Resource(object):
         
         if not authentication:
             self.authentication = (NoAuthentication(),)
-        elif isinstance(authentication, list):
+        elif isinstance(authentication, (list, tuple)):
             self.authentication = authentication
         else:
             self.authentication = (authentication,)
