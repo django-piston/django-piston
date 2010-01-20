@@ -13,7 +13,7 @@ def generate_doc(handler_cls):
     for the given handler. Use this to generate
     documentation for your API.
     """
-    if not type(handler_cls) is handler.HandlerMetaClass:
+    if isinstance(type(handler_cls), handler.HandlerMetaClass):
         raise ValueError("Give me handler, not %s" % type(handler_cls))
         
     return HandlerDocumentation(handler_cls)
