@@ -189,7 +189,7 @@ class Mimer(object):
 
         ctype = self.request.META.get('CONTENT_TYPE', type_formencoded)
         
-        if ctype.startswith(type_formencoded):
+        if type_formencoded in ctype:
             return None
         
         return ctype
