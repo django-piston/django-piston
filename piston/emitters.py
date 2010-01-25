@@ -170,7 +170,7 @@ class Emitter(object):
                 
                     if not get_fields:
                         get_fields = set([ f.attname.replace("_id", "", 1)
-                            for f in data._meta.fields ])
+                            for f in data._meta.fields + data._meta.virtual_fields])
                 
                     # sets can be negated.
                     for exclude in exclude_fields:
@@ -187,7 +187,7 @@ class Emitter(object):
 
                 met_fields = self.method_fields(handler, get_fields)
                            
-                for f in data._meta.local_fields:
+                for f in data._meta.local_fields + data._meta.virtual_fields:
                     if f.serialize and not any([ p in met_fields for p in [ f.attname, f.name ]]):
                         if not f.rel:
                             if f.attname in get_fields:
