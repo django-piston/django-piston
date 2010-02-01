@@ -26,22 +26,22 @@ class Resource(object):
     is an authentication handler. If not specified,
     `NoAuthentication` will be used by default.
     """
-    callmap = { 'GET': 'read', 'POST': 'create', 
+    callmap = { 'GET': 'read', 'POST': 'create',
                 'PUT': 'update', 'DELETE': 'delete' }
-    
+
     def __init__(self, handler, authentication=None):
         if not callable(handler):
             raise AttributeError, "Handler not callable."
-        
+
         self.handler = handler()
-        
+
         if not authentication:
             self.authentication = (NoAuthentication(),)
         elif isinstance(authentication, (list, tuple)):
             self.authentication = authentication
         else:
             self.authentication = (authentication,)
-            
+
         # Erroring
         self.email_errors = getattr(settings, 'PISTON_EMAIL_ERRORS', True)
         self.display_errors = getattr(settings, 'PISTON_DISPLAY_ERRORS', True)
@@ -58,12 +58,12 @@ class Resource(object):
         that as well.
         """
         em = kwargs.pop('emitter_format', None)
-        
+
         if not em:
             em = request.GET.get('format', 'json')
 
         return em
-    
+
     @property
     def anonymous(self):
         """
@@ -74,16 +74,16 @@ class Resource(object):
         """
         if hasattr(self.handler, 'anonymous'):
             anon = self.handler.anonymous
-            
+
             if callable(anon):
                 return anon
 
             for klass in typemapper.keys():
                 if anon == klass.__name__:
                     return klass
-            
+
         return None
-    
+
     def authenticate(self, request, rm):
         actor, anonymous = False, True
 
@@ -97,9 +97,9 @@ class Resource(object):
                     actor, anonymous = authenticator.challenge, CHALLENGE
             else:
                 return self.handler, self.handler.is_anonymous
-        
+
         return actor, anonymous
-    
+
     @vary_on_headers('Authorization')
     def __call__(self, request, *args, **kwargs):
         """
@@ -119,19 +119,21 @@ class Resource(object):
             return actor()
         else:
             handler = actor
-        
+
         # Translate nested datastructs into `request.data` here.
         if rm in ('POST', 'PUT'):
             try:
                 translate_mime(request)
             except MimerDataException:
                 return rc.BAD_REQUEST
-        
+            if not hasattr(request, 'data'):
+                request.data = request.POST if rm == 'POST' else request.PUT
+
         if not rm in handler.allowed_methods:
             return HttpResponseNotAllowed(handler.allowed_methods)
-        
+
         meth = getattr(handler, self.callmap.get(rm), None)
-        
+
         if not meth:
             raise Http404
 
@@ -139,18 +141,18 @@ class Resource(object):
         em_format = self.determine_emitter(request, *args, **kwargs)
 
         kwargs.pop('emitter_format', None)
-        
+
         # Clean up the request object a bit, since we might
         # very well have `oauth_`-headers in there, and we
         # don't want to pass these along to the handler.
         request = self.cleanup_request(request)
-        
+
         try:
             result = meth(request, *args, **kwargs)
         except FormValidationError, e:
             resp = rc.BAD_REQUEST
             resp.write(' '+str(e.form.errors))
-            
+
             return resp
         except TypeError, e:
             result = rc.BAD_REQUEST
@@ -158,15 +160,15 @@ class Resource(object):
             sig = hm.signature
 
             msg = 'Method signature does not match.\n\n'
-            
+
             if sig:
                 msg += 'Signature should be: %s' % sig
             else:
                 msg += 'Resource does not expect any parameters.'
 
-            if self.display_errors:                
+            if self.display_errors:
                 msg += '\n\nException was: %s' % str(e)
-                
+
             result.content = format_error(msg)
         except Http404:
             return rc.NOT_FOUND
@@ -177,13 +179,13 @@ class Resource(object):
             On errors (like code errors), we'd like to be able to
             give crash reports to both admins and also the calling
             user. There's two setting parameters for this:
-            
+
             Parameters::
              - `PISTON_EMAIL_ERRORS`: Will send a Django formatted
                error email to people in `settings.ADMINS`.
              - `PISTON_DISPLAY_ERRORS`: Will return a simple traceback
                to the caller, so he can tell you what error they got.
-               
+
             If `PISTON_DISPLAY_ERRORS` is not enabled, the caller will
             receive a basic "500 Internal Server Error" message.
             """
@@ -237,17 +239,17 @@ class Resource(object):
 
             if True in [ k.startswith("oauth_") for k in block.keys() ]:
                 sanitized = block.copy()
-                
+
                 for k in sanitized.keys():
                     if k.startswith("oauth_"):
                         sanitized.pop(k)
-                        
+
                 setattr(request, method_type, sanitized)
 
         return request
-        
-    # -- 
-    
+
+    # --
+
     def email_exception(self, reporter):
         subject = "Piston crash report"
         html = reporter.get_traceback_html()
@@ -255,6 +257,6 @@ class Resource(object):
         message = EmailMessage(settings.EMAIL_SUBJECT_PREFIX+subject,
                                 html, settings.SERVER_EMAIL,
                                 [ admin[1] for admin in settings.ADMINS ])
-        
+
         message.content_subtype = 'html'
         message.send(fail_silently=True)
