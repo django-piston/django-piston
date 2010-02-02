@@ -1,4 +1,4 @@
-import sys, inspect, re
+import sys, inspect
 
 from django.http import (HttpResponse, Http404, HttpResponseNotAllowed,
     HttpResponseForbidden, HttpResponseServerError)
@@ -28,8 +28,6 @@ class Resource(object):
     """
     callmap = { 'GET': 'read', 'POST': 'create',
                 'PUT': 'update', 'DELETE': 'delete' }
-
-    range_re = re.compile("^records=(\d*)-(\d*)$")
 
     def __init__(self, handler, authentication=None):
         if not callable(handler):
@@ -204,39 +202,6 @@ class Resource(object):
             else:
                 raise
 
-        range = None
-        if isinstance(result, QuerySet):
-            """
-            Limit results based on requested records. This is a based on
-            HTTP 1.1 Partial GET, RFC 2616 sec 14.35, but is intended to
-            operate on the record level rather than the byte level.  We
-            will still respond with code 206 and a range header.
-            """
-            if 'HTTP_RANGE' in request.META:
-                """
-                Parse the reange request header. HTTP proper expects Range, 
-                but since we are deviating from the bytes nature, we will use 
-                a non-standard syntax. This is expected to be of the format:
-
-                    "records" "=" start "-" end
-
-                E.g.,
-
-                    Range: records=7-45
-
-                """
-                m = self.range_re.match(request.META['HTTP_RANGE'].strip())
-                if m:
-                    start = int(m.group(1))
-                    end = int(m.group(2))
-                    count = result.count()
-                    result = result[start:end]
-                    range = "records %i-%i/%i" % (start, end, count)
-                else:
-                    resp = rc.BAD_REQUEST
-                    resp.write(' malformed range header')
-                    return resp
-
         emitter, ct = Emitter.get(em_format)
         fields = handler.fields
         if hasattr(handler, 'list_fields') and (
@@ -261,9 +226,6 @@ class Resource(object):
                 resp = stream
 
             resp.streaming = self.stream
-
-            if range:
-                resp['Content-Range'] = range
 
             return resp
         except HttpStatusCode, e:
