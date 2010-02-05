@@ -33,6 +33,7 @@ class rc_factory(object):
                  NOT_FOUND = ('Not Found', 404),
                  DUPLICATE_ENTRY = ('Conflict/Duplicate', 409),
                  NOT_HERE = ('Gone', 410),
+                 BAD_RANGE = ('Unsatifiable Range', 416),
                  INTERNAL_ERROR = ('Internal Error', 500),
                  NOT_IMPLEMENTED = ('Not Implemented', 501),
                  THROTTLED = ('Throttled', 503))
@@ -324,4 +325,11 @@ def send_consumer_mail(consumer):
         print "Mail being sent, to=%s" % consumer.user.email
         print "Subject: %s" % _(subject)
         print body
+
+class BadRangeException(Exception):
+    """
+    Raised when a partial get contains
+    an unsatifiable range
+    """
+    pass
 

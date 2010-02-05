@@ -13,7 +13,7 @@ from emitters import Emitter
 from handler import typemapper
 from doc import HandlerMethod
 from authentication import NoAuthentication
-from utils import coerce_put_post, FormValidationError, HttpStatusCode
+from utils import coerce_put_post, FormValidationError, HttpStatusCode, BadRangeException
 from utils import rc, format_error, translate_mime, MimerDataException
 
 CHALLENGE = object()
@@ -225,13 +225,54 @@ class Resource(object):
                     Range: records=7-45
 
                 """
+                def get_range(start, end, total):
+                    """
+                    Normalizes the range for queryset slicing and response
+                    header generation.  Checks that constraints defined
+                    by the RFC hold, or raises exceptions.
+                    """
+                    if start != '': range_start = int(m.group(1))
+                    else: range_start = None
+
+                    if end != '': range_end = int(m.group(2))
+                    else: range_end = None
+
+                    last = total - 1
+
+                    if range_start == None and range_end == None:
+                        raise BadRangeException()
+
+                    if range_start != None:
+                        if range_start < 0 or range_start > last: raise BadRangeException()
+                    
+                    if range_end != None:
+                        if range_end < 0: raise BadRangeException()
+                        if range_end > last: range_end = last
+                    
+                    if range_start != None and range_end != None:
+                        if range_start > range_end or range_start > last: raise BadRangeException()
+                    elif range_start != None:
+                        range_end = last
+                    elif range_end != None:
+                        range_start = range_end
+                        range_end = last
+                    else:
+                        ## impossible
+                        assert False
+                    
+                    return (range_start, range_end)
+
+
                 m = self.range_re.match(request.META['HTTP_RANGE'].strip())
                 if m:
-                    start = int(m.group(1))
-                    end = int(m.group(2))
-                    count = result.count()
-                    result = result[start:end]
-                    range = "records %i-%i/%i" % (start, end, count)
+                    try:
+                        total = result.count()
+                        start, end = get_range(m.group(1), m.group(2), total)
+                        result = result[start:end + 1]
+                        range = "records %i-%i/%i" % (start, end, total)
+                    except BadRangeException:
+                        return rc.BAD_RANGE
+
                 else:
                     resp = rc.BAD_REQUEST
                     resp.write(' malformed range header')
