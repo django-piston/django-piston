@@ -567,3 +567,22 @@ class PartialGetTests(MainTests):
         self.assertRange(resp, 1, 2)
         self.assertEquals(resp.content, expect)
 
+    def test_none_end_gt_last(self):
+        expect = '''[
+    {
+        "id": 1, 
+        "variety": "apple"
+    }, 
+    {
+        "id": 2, 
+        "variety": "carrot"
+    }, 
+    {
+        "id": 3, 
+        "variety": "dog"
+    }
+]'''
+        resp = self.client.get('/api/list_fields', {}, HTTP_RANGE='records=-10000')
+        self.assertRange(resp, 0, 2)
+        self.assertEquals(resp.content, expect)
+
