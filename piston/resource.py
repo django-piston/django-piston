@@ -254,7 +254,8 @@ class Resource(object):
                     elif range_start != None:
                         range_end = last
                     elif range_end != None:
-                        range_start = range_end
+                        if range_end > last: range_start = 0
+                        else: range_start = last - range_end + 1
                         range_end = last
                     else:
                         ## impossible
