@@ -459,3 +459,111 @@ class Issue58ModelTests(MainTests):
                                 HTTP_AUTHORIZATION=self.auth_string)
         self.assertEquals(resp.status_code, 201)
         
+class PartialGetTests(MainTests):
+    """
+    This tests the partial GET feature
+    """
+    def init_delegate(self):
+        ListFieldsModel(kind='fruit', variety='apple', color='green').save()
+        ListFieldsModel(kind='vegetable', variety='carrot', color='orange').save()
+        ListFieldsModel(kind='animal', variety='dog', color='brown').save()
+
+    def assertRange(self, resp, start, end):
+        self.assertEquals(resp.status_code, 206)
+        self.assertEquals(resp._headers['content-range'][1], "records %d-%d/3" % (start, end))
+
+    def test_malformed_range(self):
+        resp = self.client.get('/api/list_fields', {}, HTTP_RANGE='records=a-b')
+        self.assertEquals(resp.status_code, 400)
+        
+    def test_unsatisfiable_range_start_gt_end(self):
+        resp = self.client.get('/api/list_fields', {}, HTTP_RANGE='records=1-0')
+        self.assertEquals(resp.status_code, 416)
+        
+    def test_unsatisfiable_range_start_gt_last(self):
+        resp = self.client.get('/api/list_fields', {}, HTTP_RANGE='records=3-3')
+        self.assertEquals(resp.status_code, 416)
+
+    def test_0_0(self):
+        expect = '''[
+    {
+        "id": 1, 
+        "variety": "apple"
+    }
+]'''
+        resp = self.client.get('/api/list_fields', {}, HTTP_RANGE='records=0-0')
+        self.assertRange(resp, 0, 0)
+        self.assertEquals(resp.content, expect)
+
+    def test_0_1(self):
+        expect = '''[
+    {
+        "id": 1, 
+        "variety": "apple"
+    }, 
+    {
+        "id": 2, 
+        "variety": "carrot"
+    }
+]'''
+        resp = self.client.get('/api/list_fields', {}, HTTP_RANGE='records=0-1')
+        self.assertRange(resp, 0, 1)
+        self.assertEquals(resp.content, expect)
+
+    def test_1_2(self):
+        expect = '''[
+    {
+        "id": 2, 
+        "variety": "carrot"
+    }, 
+    {
+        "id": 3, 
+        "variety": "dog"
+    }
+]'''
+        resp = self.client.get('/api/list_fields', {}, HTTP_RANGE='records=1-2')
+        self.assertRange(resp, 1, 2)
+        self.assertEquals(resp.content, expect)
+
+    def test_1_none(self):
+        expect = '''[
+    {
+        "id": 2, 
+        "variety": "carrot"
+    }, 
+    {
+        "id": 3, 
+        "variety": "dog"
+    }
+]'''
+        resp = self.client.get('/api/list_fields', {}, HTTP_RANGE='records=1-')
+        self.assertRange(resp, 1, 2)
+        self.assertEquals(resp.content, expect)
+
+
+    def test_none_1(self):
+        expect = '''[
+    {
+        "id": 3, 
+        "variety": "dog"
+    }
+]'''
+        resp = self.client.get('/api/list_fields', {}, HTTP_RANGE='records=-1')
+        self.assertRange(resp, 2, 2)
+        self.assertEquals(resp.content, expect)
+
+    def test_none_2(self):
+        expect = '''[
+    {
+        "id": 2, 
+        "variety": "carrot"
+    }, 
+    {
+        "id": 3, 
+        "variety": "dog"
+    }
+]'''
+        resp = self.client.get('/api/list_fields', {}, HTTP_RANGE='records=-2')
+        self.assertRange(resp, 1, 2)
+        self.assertEquals(resp.content, expect)
+
