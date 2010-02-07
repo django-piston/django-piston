@@ -331,5 +331,6 @@ class BadRangeException(Exception):
     Raised when a partial get contains
     an unsatifiable range
     """
-    pass
+    def __init__(self, value):
+        self.value = value
 

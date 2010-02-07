@@ -239,27 +239,39 @@ class Resource(object):
 
                     last = total - 1
 
-                    if range_start == None and range_end == None:
-                        raise BadRangeException()
-
-                    if range_start != None:
-                        if range_start < 0 or range_start > last: raise BadRangeException()
-                    
-                    if range_end != None:
-                        if range_end < 0: raise BadRangeException()
-                        if range_end > last: range_end = last
-                    
                     if range_start != None and range_end != None:
-                        if range_start > range_end or range_start > last: raise BadRangeException()
+                        """
+                        Basic, well-formed range.  Make sure that requested range is
+                        between 0 and last inclusive, and that start <= end. We parse the 
+                        range with a regular expression \d*, so negatives are not possible
+                        """
+                        if range_start > last: raise BadRangeException("start gt last")
+                        if range_start > range_end: raise BadRangeException("start lt end")
+                        if range_end > last: range_end = last;
+
                     elif range_start != None:
+                        """
+                        Requsting range_start through last.  Make sure range_start is
+                        valid and set range_end to last.
+                        """
+                        if range_start > last: raise BadRangeException("start gt last")
                         range_end = last
+
                     elif range_end != None:
-                        if range_end > last: range_start = 0
-                        else: range_start = last - range_end + 1
-                        range_end = last
+                        """
+                        Requesting range_end records from the tail of the result set.
+                        If range_end > last, the entire resultset is returned.  otherwise
+                        range_start must be last - range_end.
+                        """
+                        if range_end > last:
+                            range_start = 0
+                            range_end = last
+                        else:
+                            range_start = last - range_end + 1
+                            range_end = last
+
                     else:
-                        ## impossible
-                        assert False
+                        raise BadRangeException("no start or end")
                     
                     return (range_start, range_end)
 
@@ -271,8 +283,10 @@ class Resource(object):
                         start, end = get_range(m.group(1), m.group(2), total)
                         result = result[start:end + 1]
                         range = "records %i-%i/%i" % (start, end, total)
-                    except BadRangeException:
-                        return rc.BAD_RANGE
+                    except BadRangeException, e:
+                        resp = rc.BAD_RANGE
+                        resp.write("\n%s" % e.value)
+                        return resp
 
                 else:
                     resp = rc.BAD_REQUEST
