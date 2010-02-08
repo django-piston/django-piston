@@ -48,6 +48,11 @@ class Resource(object):
         self.email_errors = getattr(settings, 'PISTON_EMAIL_ERRORS', True)
         self.display_errors = getattr(settings, 'PISTON_DISPLAY_ERRORS', True)
         self.stream = getattr(settings, 'PISTON_STREAM_OUTPUT', False)
+        
+        # Paging
+        paging_params = getattr(settings, 'PISTON_PAGINATION_PARAMS', ('offset', 'limit'))
+        self.paging_offset = paging_params[0]
+        self.paging_limit = paging_params[1]
 
     def determine_emitter(self, request, *args, **kwargs):
         """
@@ -204,7 +209,7 @@ class Resource(object):
             else:
                 raise
 
-        range = None
+        content_range = None
         if isinstance(result, QuerySet):
             """
             Limit results based on requested records. This is a based on
@@ -212,6 +217,9 @@ class Resource(object):
             operate on the record level rather than the byte level.  We
             will still respond with code 206 and a range header.
             """
+
+            request_range = None
+            
             if 'HTTP_RANGE' in request.META:
                 """
                 Parse the reange request header. HTTP proper expects Range, 
@@ -225,25 +233,60 @@ class Resource(object):
                     Range: records=7-45
 
                 """
+                m = self.range_re.match(request.META['HTTP_RANGE'].strip())
+                if m:
+                    s, e = None, None
+                    if m.group(1) != '': s = int(m.group(1))
+                    if m.group(2) != '': e = int(m.group(2))
+                    request_range = (s, e)
+
+                else:
+                    resp = rc.BAD_REQUEST
+                    resp.write(' malformed range header')
+                    return resp
+
+
+            elif self.paging_offset in request.GET and self.paging_limit in request.GET:
+                """
+                Alternatively, parse the query string for paging parameters. Here,
+                we ask for an offset and a limit, so we need to convert this to a 
+                fixed start and end to accomodate the slicing. Both parameters must 
+                be specified, but either may be left empty, exclusively, to produce
+                the following behaviors:
+
+                    * ?offset=n&limit= -> tail of list, beginning at item n
+                    * ?offset=&limit=n -> trailing n items of list
+
+                """
+                try: offset = int(request.GET[self.paging_offset])
+                except (ValueError, TypeError): offset = None
+
+                try: limit = int(request.GET[self.paging_limit])
+                except (ValueError, TypeError): limit = None
+
+                if offset != None and limit != None: request_range = (offset, offset + limit - 1)
+                elif offset != None: request_range = (offset, None)
+                elif limit != None: request_range = (None, limit)
+
+            if request_range:
                 def get_range(start, end, total):
                     """
                     Normalizes the range for queryset slicing and response
                     header generation.  Checks that constraints defined
                     by the RFC hold, or raises exceptions.
                     """
-                    if start != '': range_start = int(m.group(1))
-                    else: range_start = None
-
-                    if end != '': range_end = int(m.group(2))
-                    else: range_end = None
-
+                    
+                    if start != None and start < 0: raise BadRangeException('negative ranges not allowed')
+                    if end != None and end < 0: raise BadRangeException('negative ranges not allowed')
+                    
+                    range_start = start
+                    range_end = end
                     last = total - 1
 
                     if range_start != None and range_end != None:
                         """
                         Basic, well-formed range.  Make sure that requested range is
-                        between 0 and last inclusive, and that start <= end. We parse the 
-                        range with a regular expression \d*, so negatives are not possible
+                        between 0 and last inclusive, and that start <= end. 
                         """
                         if range_start > last: raise BadRangeException("start gt last")
                         if range_start > range_end: raise BadRangeException("start lt end")
@@ -272,26 +315,22 @@ class Resource(object):
 
                     else:
                         raise BadRangeException("no start or end")
-                    
+                  
+                    assert range_start != None
+                    assert range_end != None 
                     return (range_start, range_end)
 
 
-                m = self.range_re.match(request.META['HTTP_RANGE'].strip())
-                if m:
-                    try:
-                        total = result.count()
-                        start, end = get_range(m.group(1), m.group(2), total)
-                        result = result[start:end + 1]
-                        range = "records %i-%i/%i" % (start, end, total)
-                    except BadRangeException, e:
-                        resp = rc.BAD_RANGE
-                        resp.write("\n%s" % e.value)
-                        return resp
-
-                else:
-                    resp = rc.BAD_REQUEST
-                    resp.write(' malformed range header')
+                try:
+                    total = result.count()
+                    start, end = get_range(request_range[0], request_range[1], total)
+                    result = result[start:end + 1]
+                    content_range = "records %i-%i/%i" % (start, end, total)
+                except BadRangeException, e:
+                    resp = rc.BAD_RANGE
+                    resp.write("\n%s" % e.value)
                     return resp
+
 
         emitter, ct = Emitter.get(em_format)
         fields = handler.fields
@@ -312,9 +351,9 @@ class Resource(object):
             else: stream = srl.render(request)
 
             if not isinstance(stream, HttpResponse):
-                if range:
+                if content_range:
                     resp = HttpResponse(stream, mimetype=ct, status=206)
-                    resp['Content-Range'] = range
+                    resp['Content-Range'] = content_range
                 else:
                     resp = HttpResponse(stream, mimetype=ct)
             else:
