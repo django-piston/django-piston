@@ -472,6 +472,7 @@ class PartialGetTests(MainTests):
         self.assertEquals(resp.status_code, 206)
         self.assertEquals(resp._headers['content-range'][1], "records %d-%d/3" % (start, end))
 
+    ##### Header Tests #####
     def test_malformed_range(self):
         resp = self.client.get('/api/list_fields', {}, HTTP_RANGE='records=a-b')
         self.assertEquals(resp.status_code, 400)
@@ -583,6 +584,113 @@ class PartialGetTests(MainTests):
     }
 ]'''
         resp = self.client.get('/api/list_fields', {}, HTTP_RANGE='records=-10000')
+        self.assertRange(resp, 0, 2)
+        self.assertEquals(resp.content, expect)
+
+    ##### Parameter Tests #####
+    def test_unsatisfiable_range_offset_gt_last(self):
+        resp = self.client.get('/api/list_fields?offset=10000&limit=1')
+        self.assertEquals(resp.status_code, 416)
+        
+    def test_p_0_1(self):
+        expect = '''[
+    {
+        "id": 1, 
+        "variety": "apple"
+    }
+]'''
+        resp = self.client.get('/api/list_fields?offset=0&limit=1')
+        self.assertRange(resp, 0, 0)
+        self.assertEquals(resp.content, expect)
+
+    def test_p_0_2(self):
+        expect = '''[
+    {
+        "id": 1, 
+        "variety": "apple"
+    }, 
+    {
+        "id": 2, 
+        "variety": "carrot"
+    }
+]'''
+        resp = self.client.get('/api/list_fields?offset=0&limit=2')
+        self.assertRange(resp, 0, 1)
+        self.assertEquals(resp.content, expect)
+
+    def test_p_1_2(self):
+        expect = '''[
+    {
+        "id": 2, 
+        "variety": "carrot"
+    }, 
+    {
+        "id": 3, 
+        "variety": "dog"
+    }
+]'''
+        resp = self.client.get('/api/list_fields?offset=1&limit=2')
+        self.assertRange(resp, 1, 2)
+        self.assertEquals(resp.content, expect)
+
+    def test_p_1_none(self):
+        expect = '''[
+    {
+        "id": 2, 
+        "variety": "carrot"
+    }, 
+    {
+        "id": 3, 
+        "variety": "dog"
+    }
+]'''
+        resp = self.client.get('/api/list_fields?offset=1&limit=')
+        self.assertRange(resp, 1, 2)
+        self.assertEquals(resp.content, expect)
+
+
+    def test_p_none_1(self):
+        expect = '''[
+    {
+        "id": 3, 
+        "variety": "dog"
+    }
+]'''
+        resp = self.client.get('/api/list_fields?offset=&limit=1')
+        self.assertRange(resp, 2, 2)
+        self.assertEquals(resp.content, expect)
+
+    def test_p_none_2(self):
+        expect = '''[
+    {
+        "id": 2, 
+        "variety": "carrot"
+    }, 
+    {
+        "id": 3, 
+        "variety": "dog"
+    }
+]'''
+        resp = self.client.get('/api/list_fields?offset=&limit=2')
+        self.assertRange(resp, 1, 2)
+        self.assertEquals(resp.content, expect)
+
+    def test_none_limit_gt_last(self):
+        expect = '''[
+    {
+        "id": 1, 
+        "variety": "apple"
+    }, 
+    {
+        "id": 2, 
+        "variety": "carrot"
+    }, 
+    {
+        "id": 3, 
+        "variety": "dog"
+    }
+]'''
+        resp = self.client.get('/api/list_fields?offset=&limit=10000')
         self.assertRange(resp, 0, 2)
         self.assertEquals(resp.content, expect)
 
