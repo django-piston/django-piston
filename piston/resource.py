@@ -233,18 +233,18 @@ class Resource(object):
                     Range: records=7-45
 
                 """
-                m = self.range_re.match(request.META['HTTP_RANGE'].strip())
-                if m:
-                    s, e = None, None
-                    if m.group(1) != '': s = int(m.group(1))
-                    if m.group(2) != '': e = int(m.group(2))
-                    request_range = (s, e)
-
-                else:
-                    resp = rc.BAD_REQUEST
-                    resp.write(' malformed range header')
-                    return resp
-
+                h = request.META['HTTP_RANGE'].strip()
+                if h.startswith('records='):
+                    m = self.range_re.match(h)
+                    if m:
+                        s, e = None, None
+                        if m.group(1) != '': s = int(m.group(1))
+                        if m.group(2) != '': e = int(m.group(2))
+                        request_range = (s, e)
+                    else:
+                        resp = rc.BAD_REQUEST
+                        resp.write(' malformed range header')
+                        return resp 
 
             elif self.paging_offset in request.GET and self.paging_limit in request.GET:
                 """

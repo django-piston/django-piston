@@ -473,7 +473,11 @@ class PartialGetTests(MainTests):
         self.assertEquals(resp._headers['content-range'][1], "records %d-%d/3" % (start, end))
 
     ##### Header Tests #####
-    def test_malformed_range(self):
+    def test_nonrecords_range(self):
+        resp = self.client.get('/api/list_fields', {}, HTTP_RANGE='bytes=0-1023')
+        self.assertTrue(resp.status_code != 400)
+
+    def test_malformed_records_range(self):
         resp = self.client.get('/api/list_fields', {}, HTTP_RANGE='records=a-b')
         self.assertEquals(resp.status_code, 400)
         
