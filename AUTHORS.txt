@@ -23,4 +23,4 @@ Joe Stump for testing and contributing the OAuth bits
 Mike Malone for giving a presentation on Piston, and fixing our throttler :-)
 Didier Deshommes for contributing a fix for #58
 Alexander Ljungberg for fixing a bug in the default behavior of `update`
-Gareth Rushgrove for plugging a whole in the JSON callback facility
+Gareth Rushgrove for plugging a hole in the JSON callback facility
