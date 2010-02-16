@@ -198,10 +198,13 @@ class Resource(object):
                 raise
 
         emitter, ct = Emitter.get(em_format)
-        fields = handler.fields
-        if hasattr(handler, 'list_fields') and (
-                isinstance(result, list) or isinstance(result, QuerySet)):
-            fields = handler.list_fields
+        try:
+            result, fields = result
+        except ValueError:
+            fields = handler.fields
+            if hasattr(handler, 'list_fields') and (
+                    isinstance(result, list) or isinstance(result, QuerySet)):
+                fields = handler.list_fields
 
         srl = emitter(result, typemapper, handler, fields, anonymous)
 
