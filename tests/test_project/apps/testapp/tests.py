@@ -470,23 +470,23 @@ class PartialGetTests(MainTests):
 
     def assertRange(self, resp, start, end):
         self.assertEquals(resp.status_code, 206)
-        self.assertEquals(resp._headers['content-range'][1], "records %d-%d/3" % (start, end))
+        self.assertEquals(resp._headers['content-range'][1], "items %d-%d/3" % (start, end))
 
     ##### Header Tests #####
-    def test_nonrecords_range(self):
+    def test_nonitems_range(self):
         resp = self.client.get('/api/list_fields', {}, HTTP_RANGE='bytes=0-1023')
         self.assertTrue(resp.status_code != 400)
 
-    def test_malformed_records_range(self):
-        resp = self.client.get('/api/list_fields', {}, HTTP_RANGE='records=a-b')
+    def test_malformed_items_range(self):
+        resp = self.client.get('/api/list_fields', {}, HTTP_RANGE='items=a-b')
         self.assertEquals(resp.status_code, 400)
         
     def test_unsatisfiable_range_start_gt_end(self):
-        resp = self.client.get('/api/list_fields', {}, HTTP_RANGE='records=1-0')
+        resp = self.client.get('/api/list_fields', {}, HTTP_RANGE='items=1-0')
         self.assertEquals(resp.status_code, 416)
         
     def test_unsatisfiable_range_start_gt_last(self):
-        resp = self.client.get('/api/list_fields', {}, HTTP_RANGE='records=3-3')
+        resp = self.client.get('/api/list_fields', {}, HTTP_RANGE='items=3-3')
         self.assertEquals(resp.status_code, 416)
 
     def test_0_0(self):
@@ -496,7 +496,7 @@ class PartialGetTests(MainTests):
         "variety": "apple"
     }
 ]'''
-        resp = self.client.get('/api/list_fields', {}, HTTP_RANGE='records=0-0')
+        resp = self.client.get('/api/list_fields', {}, HTTP_RANGE='items=0-0')
         self.assertRange(resp, 0, 0)
         self.assertEquals(resp.content, expect)
 
@@ -511,7 +511,7 @@ class PartialGetTests(MainTests):
         "variety": "carrot"
     }
 ]'''
-        resp = self.client.get('/api/list_fields', {}, HTTP_RANGE='records=0-1')
+        resp = self.client.get('/api/list_fields', {}, HTTP_RANGE='items=0-1')
         self.assertRange(resp, 0, 1)
         self.assertEquals(resp.content, expect)
 
@@ -526,7 +526,7 @@ class PartialGetTests(MainTests):
         "variety": "dog"
     }
 ]'''
-        resp = self.client.get('/api/list_fields', {}, HTTP_RANGE='records=1-2')
+        resp = self.client.get('/api/list_fields', {}, HTTP_RANGE='items=1-2')
         self.assertRange(resp, 1, 2)
         self.assertEquals(resp.content, expect)
 
@@ -541,7 +541,7 @@ class PartialGetTests(MainTests):
         "variety": "dog"
     }
 ]'''
-        resp = self.client.get('/api/list_fields', {}, HTTP_RANGE='records=1-')
+        resp = self.client.get('/api/list_fields', {}, HTTP_RANGE='items=1-')
         self.assertRange(resp, 1, 2)
         self.assertEquals(resp.content, expect)
 
@@ -553,7 +553,7 @@ class PartialGetTests(MainTests):
         "variety": "dog"
     }
 ]'''
-        resp = self.client.get('/api/list_fields', {}, HTTP_RANGE='records=-1')
+        resp = self.client.get('/api/list_fields', {}, HTTP_RANGE='items=-1')
         self.assertRange(resp, 2, 2)
         self.assertEquals(resp.content, expect)
 
@@ -568,7 +568,7 @@ class PartialGetTests(MainTests):
         "variety": "dog"
     }
 ]'''
-        resp = self.client.get('/api/list_fields', {}, HTTP_RANGE='records=-2')
+        resp = self.client.get('/api/list_fields', {}, HTTP_RANGE='items=-2')
         self.assertRange(resp, 1, 2)
         self.assertEquals(resp.content, expect)
 
@@ -587,7 +587,7 @@ class PartialGetTests(MainTests):
         "variety": "dog"
     }
 ]'''
-        resp = self.client.get('/api/list_fields', {}, HTTP_RANGE='records=-10000')
+        resp = self.client.get('/api/list_fields', {}, HTTP_RANGE='items=-10000')
         self.assertRange(resp, 0, 2)
         self.assertEquals(resp.content, expect)
 

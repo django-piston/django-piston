@@ -29,7 +29,7 @@ class Resource(object):
     callmap = { 'GET': 'read', 'POST': 'create',
                 'PUT': 'update', 'DELETE': 'delete' }
 
-    range_re = re.compile("^records=(\d*)-(\d*)$")
+    range_re = re.compile("^items=(\d*)-(\d*)$")
 
     def __init__(self, handler, authentication=None):
         if not callable(handler):
@@ -212,7 +212,7 @@ class Resource(object):
         content_range = None
         if isinstance(result, QuerySet):
             """
-            Limit results based on requested records. This is a based on
+            Limit results based on requested items. This is a based on
             HTTP 1.1 Partial GET, RFC 2616 sec 14.35, but is intended to
             operate on the record level rather than the byte level.  We
             will still respond with code 206 and a range header.
@@ -226,15 +226,15 @@ class Resource(object):
                 but since we are deviating from the bytes nature, we will use 
                 a non-standard syntax. This is expected to be of the format:
 
-                    "records" "=" start "-" end
+                    "items" "=" start "-" end
 
                 E.g.,
 
-                    Range: records=7-45
+                    Range: items=7-45
 
                 """
                 h = request.META['HTTP_RANGE'].strip()
-                if h.startswith('records='):
+                if h.startswith('items='):
                     m = self.range_re.match(h)
                     if m:
                         s, e = None, None
@@ -302,7 +302,7 @@ class Resource(object):
 
                     elif range_end != None:
                         """
-                        Requesting range_end records from the tail of the result set.
+                        Requesting range_end items from the tail of the result set.
                         If range_end > last, the entire resultset is returned.  otherwise
                         range_start must be last - range_end.
                         """
@@ -325,7 +325,7 @@ class Resource(object):
                     total = result.count()
                     start, end = get_range(request_range[0], request_range[1], total)
                     result = result[start:end + 1]
-                    content_range = "records %i-%i/%i" % (start, end, total)
+                    content_range = "items %i-%i/%i" % (start, end, total)
                 except BadRangeException, e:
                     resp = rc.BAD_RANGE
                     resp.write("\n%s" % e.value)
