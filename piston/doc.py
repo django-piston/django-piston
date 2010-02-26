@@ -89,7 +89,7 @@ class HandlerDocumentation(object):
             if not met:
                 continue
                 
-            stale = inspect.getmodule(met) is handler
+            stale = inspect.getmodule(met.im_func) is not inspect.getmodule(self.handler)
 
             if not self.handler.is_anonymous:
                 if met and (not stale or include_default):
