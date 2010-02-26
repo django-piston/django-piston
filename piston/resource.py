@@ -351,15 +351,15 @@ class Resource(object):
             else: stream = srl.render(request)
 
             if not isinstance(stream, HttpResponse):
-                if content_range:
-                    resp = HttpResponse(stream, mimetype=ct, status=206)
-                    resp['Content-Range'] = content_range
-                else:
-                    resp = HttpResponse(stream, mimetype=ct)
+                resp = HttpResponse(stream, mimetype=ct)
             else:
                 resp = stream
 
             resp.streaming = self.stream
+
+            if content_range:
+                resp.status_code = 206
+                resp['Content-Range'] = content_range
 
             return resp
         except HttpStatusCode, e:
