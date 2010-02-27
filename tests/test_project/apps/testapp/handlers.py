@@ -74,7 +74,7 @@ class EchoHandler(BaseHandler):
 
     @validate(EchoForm, 'GET')
     def read(self, request):
-        return {'msg': request.GET['msg']}
+        return {'msg': request.form.cleaned_data['msg']}
 
 class ListFieldsHandler(BaseHandler):
     model = ListFieldsModel

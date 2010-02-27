@@ -66,6 +66,7 @@ def validate(v_form, operation='POST'):
         form = v_form(getattr(request, operation))
     
         if form.is_valid():
+            setattr( request, 'form', form )
             return f(self, request, *a, **kwa)
         else:
             raise FormValidationError(form)
