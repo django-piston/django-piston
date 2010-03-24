@@ -189,7 +189,13 @@ class Resource(object):
             """
             return self.handle_exception(request, e, sys.exc_info(), em_format)
 
-        emitter, ct = Emitter.get(em_format)
+        try:
+            emitter, ct = Emitter.get(em_format)
+        except ValueError:
+            result = rc.BAD_REQUEST
+            result.content = "Invalid output format specified '%s'." % em_format
+            return result
+
         try:
             result, fields = result
         except ValueError:
