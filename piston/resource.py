@@ -224,7 +224,7 @@ class Resource(object):
             status_code = result.status_code
             # Note: We can't use result.content here because that method attempts
             # to convert the content into a string which we don't want. 
-            # when _is_string is True _container is the raw data
+            # when _is_string is False _container is the raw data
             result = result._container
             
         srl = emitter(result, typemapper, handler, fields, anonymous)
