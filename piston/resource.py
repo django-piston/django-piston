@@ -215,6 +215,18 @@ class Resource(object):
                 isinstance(result, list) or isinstance(result, QuerySet)):
             fields = handler.list_fields
 
+        status_code = 200
+
+        # If we're looking at a response object which contains non-string
+        # content, then assume we should use the emitter to format that 
+        # content
+        if isinstance(result, HttpResponse) and not result._is_string:
+            status_code = result.status_code
+            # Note: We can't use result.content here because that method attempts
+            # to convert the content into a string which we don't want. 
+            # when _is_string is False _container is the raw data
+            result = result._container
+            
         srl = emitter(result, typemapper, handler, fields, anonymous)
 
         try:
@@ -228,7 +240,7 @@ class Resource(object):
             else: stream = srl.render(request)
 
             if not isinstance(stream, HttpResponse):
-                resp = HttpResponse(stream, mimetype=ct)
+                resp = HttpResponse(stream, mimetype=ct, status=status_code)
             else:
                 resp = stream
 
