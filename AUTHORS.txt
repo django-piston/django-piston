@@ -25,3 +25,4 @@ Didier Deshommes for contributing a fix for #58
 Alexander Ljungberg for fixing a bug in the default behavior of `update`
 Gareth Rushgrove for plugging a hole in the JSON callback facility
 Matt Cordes for expanding on the rc.* facilities
+Rock Howard for improving form validation behavior
