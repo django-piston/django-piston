@@ -105,7 +105,7 @@ class HandlerDocumentation(object):
         
     @property
     def is_anonymous(self):
-        return handler.is_anonymous
+        return self.handler.is_anonymous
 
     def get_model(self):
         return getattr(self, 'model', None)
