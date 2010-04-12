@@ -2,7 +2,7 @@
 from django.core import mail
 from django.contrib.auth.models import User
 from django.conf import settings
-from django.http import HttpRequest
+from django.http import HttpRequest, HttpResponse
 from django.utils import simplejson
 
 # Piston imports
@@ -81,3 +81,56 @@ class CustomResponseWithStatusCodeTest(TestCase):
          # compare the original data dict with the json response 
          # converted to a dict
          self.assertEquals(response_data, simplejson.loads(response.content))
+
+
+class ErrorHandlerTest(TestCase):
+    def test_customized_error_handler(self):
+        """
+        Throw a custom error from a handler method and catch (and format) it 
+        in an overridden error_handler method on the associated Resource object
+        """
+        class GoAwayError(Exception):
+            def __init__(self, name, reason):
+                self.name = name
+                self.reason = reason
+
+        class MyHandler(BaseHandler):
+            """
+            Handler which raises a custom exception 
+            """
+            def read(self, request):
+                raise GoAwayError('Jerome', 'No one likes you')
+
+        class MyResource(Resource):
+            def error_handler(self, error, request):
+                # if the exeption is our exeption then generate a 
+                # custom response with embedded content that will be 
+                # formatted as json 
+                if isinstance(error, GoAwayError):
+                    response = rc.FORBIDDEN
+                    response.content = dict(error=dict(
+                        name=error.name, 
+                        message="Get out of here and dont come back", 
+                        reason=error.reason
+                    ))    
+
+                    return response
+
+                return super(error_handler, self).error_handler(error, request)
+
+        resource = MyResource(MyHandler)
+
+        request = HttpRequest()
+        request.method = 'GET'
+        response = resource(request, emitter_format='json')
+
+        self.assertEquals(401, response.status_code)
+
+        # verify the content we got back can be converted back to json 
+        # and examine the dictionary keys all exist as expected
+        response_data = simplejson.loads(response.content)
+        self.assertTrue('error' in response_data)
+        self.assertTrue('name' in response_data['error'])
+        self.assertTrue('message' in response_data['error'])
+        self.assertTrue('reason' in response_data['error'])
+
