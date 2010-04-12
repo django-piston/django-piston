@@ -116,7 +116,7 @@ class ErrorHandlerTest(TestCase):
 
                     return response
 
-                return super(error_handler, self).error_handler(error, request)
+                return super(MyResource, self).error_handler(error, request)
 
         resource = MyResource(MyHandler)
 
