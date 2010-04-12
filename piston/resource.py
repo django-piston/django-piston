@@ -243,7 +243,7 @@ class Resource(object):
 
     def error_handler(self, e, request):
         """
-        Override this method add handling of errors customized for your 
+        Override this method to add handling of errors customized for your 
         needs
         """
         if isinstance(e, FormValidationError):
@@ -265,6 +265,7 @@ class Resource(object):
                 msg += '\n\nException was: %s' % str(e)
 
             result.content = format_error(msg)
+            return result
         elif isinstance(e, Http404):
             return rc.NOT_FOUND
 

@@ -103,7 +103,7 @@ class ErrorHandlerTest(TestCase):
 
         class MyResource(Resource):
             def error_handler(self, error, request):
-                # if the exeption is our exeption then generate a 
+                # if the exception is our exeption then generate a 
                 # custom response with embedded content that will be 
                 # formatted as json 
                 if isinstance(error, GoAwayError):
