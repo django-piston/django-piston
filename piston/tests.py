@@ -104,7 +104,7 @@ class ErrorHandlerTest(TestCase):
                 raise GoAwayError('Jerome', 'No one likes you')
 
         class MyResource(Resource):
-            def error_handler(self, error, request):
+            def error_handler(self, error, request, meth):
                 # if the exception is our exeption then generate a 
                 # custom response with embedded content that will be 
                 # formatted as json 
@@ -118,7 +118,7 @@ class ErrorHandlerTest(TestCase):
 
                     return response
 
-                return super(MyResource, self).error_handler(error, request)
+                return super(MyResource, self).error_handler(error, request, meth)
 
         resource = MyResource(MyHandler)
 
