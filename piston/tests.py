@@ -98,6 +98,8 @@ class ErrorHandlerTest(TestCase):
             """
             Handler which raises a custom exception 
             """
+            allowed_methods = ('GET',)
+
             def read(self, request):
                 raise GoAwayError('Jerome', 'No one likes you')
 
