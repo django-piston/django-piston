@@ -136,3 +136,40 @@ class ErrorHandlerTest(TestCase):
         self.assertTrue('message' in response_data['error'])
         self.assertTrue('reason' in response_data['error'])
 
+    def test_type_error(self):
+        """
+        Verify that type errors thrown from a handler method result in a valid 
+        HttpResonse object being returned from the error_handler method
+        """
+        class MyHandler(BaseHandler):
+            def read(self, request):
+                raise TypeError()
+
+        request = HttpRequest()
+        request.method = 'GET'
+        response = Resource(MyHandler)(request)
+
+        self.assertTrue(isinstance(response, HttpResponse), "Expected a response, not: %s" 
+            % response)
+
+
+    def test_other_error(self):
+        """
+        Verify that other exceptions thrown from a handler method result in a valid
+        HttpResponse object being returned from the error_handler method
+        """
+        class MyHandler(BaseHandler):
+            def read(self, request):
+                raise Exception()
+
+        resource = Resource(MyHandler)
+        resource.display_errors = True
+        resource.email_errors = False
+
+        request = HttpRequest()
+        request.method = 'GET'
+        response = resource(request)
+
+        self.assertTrue(isinstance(response, HttpResponse), "Expected a response, not: %s" 
+            % response)
+
