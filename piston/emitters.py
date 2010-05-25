@@ -230,7 +230,7 @@ class Emitter(object):
                         maybe = getattr(data, maybe_field, None)
                         if maybe:
                             if callable(maybe):
-                                if len(inspect.getargspec(maybe)[0]) == 1:
+                                if len(inspect.getargspec(maybe)[0]) <= 1:
                                     ret[maybe_field] = _any(maybe())
                             else:
                                 ret[maybe_field] = _any(maybe)
