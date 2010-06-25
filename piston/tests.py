@@ -2,6 +2,7 @@
 from django.core import mail
 from django.contrib.auth.models import User
 from django.conf import settings
+from django.template import loader, TemplateDoesNotExist
 from django.http import HttpRequest, HttpResponse
 from django.utils import simplejson
 
@@ -22,9 +23,28 @@ class ConsumerTest(TestCase):
         self.consumer.user = User.objects.get(pk=3)
         self.consumer.generate_random_codes()
 
+    def _pre_test_email(self):
+        template = "piston/mails/consumer_%s.txt" % self.consumer.status
+        try:
+            loader.render_to_string(template, {
+                'consumer': self.consumer,
+                'user': self.consumer.user
+            })
+            return True
+        except TemplateDoesNotExist:
+            """
+            They haven't set up the templates, which means they might not want
+            these emails sent.
+            """
+            return False
+
     def test_create_pending(self):
         """ Ensure creating a pending Consumer sends proper emails """
-        # If it's pending we should have two messages in the outbox; one 
+        # Verify if the emails can be sent
+        if not self._pre_test_email():
+            return
+
+        # If it's pending we should have two messages in the outbox; one
         # to the consumer and one to the site admins.
         if len(settings.ADMINS):
             self.assertEquals(len(mail.outbox), 2)
@@ -41,8 +61,12 @@ class ConsumerTest(TestCase):
         mail.outbox = []
 
         # Delete the consumer, which should fire off the cancel email.
-        self.consumer.delete() 
-        
+        self.consumer.delete()
+
+        # Verify if the emails can be sent
+        if not self._pre_test_email():
+            return
+
         self.assertEquals(len(mail.outbox), 1)
         expected = "Your API Consumer for example.com has been canceled."
         self.assertEquals(mail.outbox[0].subject, expected)
@@ -172,4 +196,3 @@ class ErrorHandlerTest(TestCase):
 
         self.assertTrue(isinstance(response, HttpResponse), "Expected a response, not: %s" 
             % response)
-

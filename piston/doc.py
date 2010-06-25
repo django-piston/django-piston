@@ -13,7 +13,7 @@ def generate_doc(handler_cls):
     for the given handler. Use this to generate
     documentation for your API.
     """
-    if not type(handler_cls) is handler.HandlerMetaClass:
+    if isinstance(type(handler_cls), handler.HandlerMetaClass):
         raise ValueError("Give me handler, not %s" % type(handler_cls))
         
     return HandlerDocumentation(handler_cls)
@@ -89,7 +89,7 @@ class HandlerDocumentation(object):
             if not met:
                 continue
                 
-            stale = inspect.getmodule(met) is handler
+            stale = inspect.getmodule(met.im_func) is not inspect.getmodule(self.handler)
 
             if not self.handler.is_anonymous:
                 if met and (not stale or include_default):
