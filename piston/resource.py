@@ -166,11 +166,20 @@ class Resource(object):
             result = self.error_handler(e, request, meth)
 
 
-        emitter, ct = Emitter.get(em_format)
-        fields = handler.fields
-        if hasattr(handler, 'list_fields') and (
-                isinstance(result, list) or isinstance(result, QuerySet)):
-            fields = handler.list_fields
+        try:
+            emitter, ct = Emitter.get(em_format)
+        except ValueError:
+            result = rc.BAD_REQUEST
+            result.content = "Invalid output format specified '%s'." % em_format
+            return result
+
+        try:
+            result, fields = result
+        except ValueError:
+            fields = handler.fields
+            if hasattr(handler, 'list_fields') and (
+                    isinstance(result, list) or isinstance(result, QuerySet)):
+                fields = handler.list_fields
 
         status_code = 200
 
