@@ -163,7 +163,7 @@ class Resource(object):
         try:
             result = meth(request, *args, **kwargs)
         except Exception, e:
-            result = self.error_handler(e, request, meth)
+            result = self.error_handler(e, request, meth, em_format)
 
 
         try:
@@ -250,7 +250,7 @@ class Resource(object):
         message.send(fail_silently=True)
 
 
-    def error_handler(self, e, request, meth):
+    def error_handler(self, e, request, meth, em_format):
         """
         Override this method to add handling of errors customized for your 
         needs
