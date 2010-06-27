@@ -34,6 +34,7 @@ class Resource(object):
             raise AttributeError, "Handler not callable."
 
         self.handler = handler()
+        self.csrf_exempt = getattr(self.handler, 'csrf_exempt', True)
 
         if not authentication:
             self.authentication = (NoAuthentication(),)
