@@ -146,8 +146,7 @@ class Resource(object):
         if not rm in handler.allowed_methods:
             return HttpResponseNotAllowed(handler.allowed_methods)
 
-        meth = getattr(handler, self.callmap.get(rm), None)
-
+        meth = getattr(handler, self.callmap.get(rm, ''), None)
         if not meth:
             raise Http404
 

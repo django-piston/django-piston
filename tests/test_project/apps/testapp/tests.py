@@ -423,6 +423,21 @@ class ListFieldsTest(MainTests):
         self.assertEquals(resp.status_code, 200)
         self.assertEquals(resp.content, expect)
         
+class ErrorHandlingTests(MainTests):
+    """Test proper handling of errors by Resource"""
+
+    def test_response_not_allowed(self):
+        resp = self.client.post('/api/echo')
+        self.assertEquals(resp.status_code, 405)
+        self.assertEquals(resp['Allow'], 'GET, HEAD')
+
+    def test_not_found_because_of_unexpected_http_method(self):
+        # not using self.client.head because it is not present in Django 1.0
+        resp = self.client.get('/api/echo', REQUEST_METHOD='HEAD')
+        self.assertEquals(resp.status_code, 404)
+        self.assertEquals(resp.content, '')
+
+
 class Issue58ModelTests(MainTests):
     """
     This testcase addresses #58 in django-piston where if a model
@@ -458,4 +473,3 @@ class Issue58ModelTests(MainTests):
         resp = self.client.post('/api/issue58.json', outgoing, content_type='application/json',
                                 HTTP_AUTHORIZATION=self.auth_string)
         self.assertEquals(resp.status_code, 201)
-        
