@@ -110,7 +110,7 @@ class Emitter(object):
             elif isinstance(thing, decimal.Decimal):
                 ret = str(thing)
             elif isinstance(thing, Model):
-                ret = _model(thing, fields=fields)
+                ret = _model(thing, fields)
             elif isinstance(thing, HttpResponse):
                 raise HttpStatusCode(thing)
             elif inspect.isfunction(thing):
@@ -287,7 +287,7 @@ class Emitter(object):
             """
             return [ _any(v, fields) for v in data ]
 
-        def _dict(data, fields):
+        def _dict(data, fields=()):
             """
             Dictionaries.
             """
