@@ -27,3 +27,4 @@ Gareth Rushgrove for plugging a hole in the JSON callback facility
 Matt Cordes for expanding on the rc.* facilities
 Rock Howard for improving form validation behavior
 Jim Robert for contributing a fix for #117
+Emanuele Rocca for improving error handling
