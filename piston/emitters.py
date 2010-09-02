@@ -95,16 +95,16 @@ class Emitter(object):
 
         Returns `dict`.
         """
-        def _any(thing, fields=()):
+        def _any(thing, fields=None):
             """
             Dispatch, all types are routed through here.
             """
             ret = None
 
             if isinstance(thing, QuerySet):
-                ret = _qs(thing, fields=fields)
+                ret = _qs(thing, fields)
             elif isinstance(thing, (tuple, list, set)):
-                ret = _list(thing, fields=fields)
+                ret = _list(thing, fields)
             elif isinstance(thing, dict):
                 ret = _dict(thing, fields)
             elif isinstance(thing, decimal.Decimal):
@@ -133,19 +133,19 @@ class Emitter(object):
             """
             return _any(getattr(data, field.name))
 
-        def _related(data, fields=()):
+        def _related(data, fields=None):
             """
             Foreign keys.
             """
             return [ _model(m, fields) for m in data.iterator() ]
 
-        def _m2m(data, field, fields=()):
+        def _m2m(data, field, fields=None):
             """
             Many to many (re-route to `_model`.)
             """
             return [ _model(m, fields) for m in getattr(data, field.name).iterator() ]
 
-        def _model(data, fields=()):
+        def _model(data, fields=None):
             """
             Models. Will respect the `fields` and/or
             `exclude` on the handler (see `typemapper`.)
@@ -157,7 +157,10 @@ class Emitter(object):
             if handler or fields:
                 v = lambda f: getattr(data, f.attname)
 
-                if not fields:
+                if handler:
+                    fields = getattr(handler, 'fields')    
+                
+                if not fields or hasattr(handler, 'fields'):
                     """
                     Fields was not specified, try to find teh correct
                     version in the typemapper we were sent.
@@ -275,19 +278,19 @@ class Emitter(object):
 
             return ret
 
-        def _qs(data, fields=()):
+        def _qs(data, fields=None):
             """
             Querysets.
             """
             return [ _any(v, fields) for v in data ]
 
-        def _list(data, fields=()):
+        def _list(data, fields=None):
             """
             Lists.
             """
             return [ _any(v, fields) for v in data ]
 
-        def _dict(data, fields=()):
+        def _dict(data, fields=None):
             """
             Dictionaries.
             """
