@@ -712,4 +712,3 @@ class PartialGetTests(MainTests):
         resp = self.client.get('/api/list_fields?offset=&limit=10000')
         self.assertRange(resp, 0, 2)
         self.assertEquals(resp.content, expect)
-

@@ -196,12 +196,27 @@ class Resource(object):
             result = result._container
             if sig:
                 msg += 'Signature should be: %s' % sig
+     
+        srl = emitter(result, typemapper, handler, fields, anonymous)
+
+        try:
+            """
+            Decide whether or not we want a generator here,
+            or we just want to buffer up the entire result
+            before sending it to the client. Won't matter for
+            smaller datasets, but larger will have an impact.
+            """
+            if self.stream: stream = srl.stream_render(request)
+            else: stream = srl.render(request)
+
+            if not isinstance(stream, HttpResponse):
+                resp = HttpResponse(stream, mimetype=ct, status=status_code)
             else:
-                msg += 'Resource does not expect any parameters.'
+                resp = stream
 
             if self.display_errors:
                 msg += '\n\nException was: %s' % str(e)
-
+            resp.streaming = self.stream
             result.content = format_error(msg)
         except Http404:
             return rc.NOT_FOUND
