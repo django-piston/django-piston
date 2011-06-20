@@ -1,4 +1,4 @@
-syntax: glob
+.hg
 *.egg
 *.pyc
 build
@@ -12,3 +12,4 @@ develop-eggs
 .DS_Store
 .svn
 *.swp
+.tox.emacs.desktop
